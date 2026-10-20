@@ -4,10 +4,11 @@ import os
 from importlib.metadata import distributions
 
 import atomworks  # noqa: F401
-import rfproteina  # noqa: F401
 import torch
 from openbabel import pybel
 from tmol.score.ljlk.potentials._compiled import ljlk_pose_scores
+
+import rfproteina  # noqa: F401
 
 accelerator = os.environ["ACCELERATOR"]
 assert torch.__version__.endswith("+" + {"cu13": "cu130", "cu12": "cu126", "cpu": "cpu"}[accelerator])
