@@ -99,7 +99,7 @@ On Linux x86_64 with Python 3.12, an NVIDIA GPU and a CUDA 13-compatible driver:
 ```bash
 pip install uv                      # or: curl -LsSf https://astral.sh/uv/install.sh | sh
 uv venv --python 3.12 && source .venv/bin/activate
-uv pip install "rfd4-proteina[metrics-cuda13,bioir]"
+uv pip install "rfd4-proteina[all-cuda13]"   # CUDA 12: all-cuda12; the base package alone is "rfd4-proteina"
 
 EXAMPLE=$(python -c "import rfproteina, pathlib; print(pathlib.Path(rfproteina.__file__).parent / 'data/benchmarks/monomer/monomer-short.cif')")
 rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina inputs=$EXAMPLE num_replicates=1 out_dir=./runs/first ~metrics
@@ -110,8 +110,8 @@ about two minutes on a fresh cluster node where plain `pip` takes about ten; `pi
 
 The model can also be run as a Hugging Face Diffusers pipeline. The [quickstart](https://rfd4-proteina.org/latest/quickstart.html) covers all three routes in order: GitHub clone, PyPI and Diffusers.
 
-Add `inference_backend=bioir` to use the BioIR runtime (installed by the `bioir` extra). Drop the `bioir` extra
-for a native-only install. If `pip` cannot see a very recent release, retry with `--no-cache-dir`.
+Add `inference_backend=bioir` to use the BioIR runtime (included in `all-cuda13`). `all-cuda12` and the plain package
+use the native runtime. If `pip` cannot see a very recent release, retry with `--no-cache-dir`.
 
 ## Run the model
 

@@ -96,7 +96,7 @@ environment is about 7 GB and ``uv`` installs it in about two minutes, where pla
 
    pip install uv                      # or: curl -LsSf https://astral.sh/uv/install.sh | sh
    uv venv --python 3.12 && source .venv/bin/activate
-   uv pip install "rfd4-proteina[metrics-cuda13,bioir]"   # CUDA 12: metrics-cuda12 instead, without bioir
+   uv pip install "rfd4-proteina[all-cuda13]"   # CUDA 12: all-cuda12 (no BioIR); rfd4-proteina alone is the base package
 
    rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
        inputs=design.yaml out_dir=./runs/pip ~metrics compile_lengths=null

@@ -77,7 +77,7 @@ Python 3.12 environment, use the same CUDA wheel source as setup:
    source .venv/bin/activate
    python -m pip install uv
    uv pip install --build-constraint <(printf 'torch==2.14.1\n') \
-       --torch-backend cu132 -e '.[metrics-cuda13]'
+       --torch-backend cu132 -e '.[all-cuda13]'
    python -m pip check
    export DATA_PATH="${DATA_PATH:-$PWD/data_path}"
    ./scripts/download_assets.sh "$DATA_PATH" --skip-of3
@@ -97,9 +97,25 @@ Hydra configs and benchmark inputs. A wheel install reads local environment
 files from the working directory; an editable install reads them from the
 checkout root.
 
-AtomWorks is installed from the project metadata. TMol 0.2.0 provides CPU operators
-in the base package; the ``metrics-cuda12`` and ``metrics-cuda13`` extras install the
-matching CUDA-major operator package. System drivers and external metric tools are
+AtomWorks is installed from the project metadata. The base package runs generation with the
+default metrics. There are two extras; pick the one that matches your driver, because it selects the
+TMol and cuEquivariance operator wheels (``tmol-ops-cu12`` or ``tmol-ops-cu13``).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 76
+
+   * - Extra
+     - Adds
+   * - (none)
+     - Generation, evaluation with the default metrics, Hugging Face checkpoints.
+   * - ``all-cuda13``
+     - TMol with ``tmol-ops-cu13``, cuEquivariance, the CUTLASS DSL kernels, PoseBusters, scikit-learn and the BioIR
+       runtime for ``inference_backend=bioir``.
+   * - ``all-cuda12``
+     - The same with ``tmol-ops-cu12`` and the CUDA 12 cuEquivariance operators, without BioIR (CUDA 13 only).
+
+For example ``uv pip install "rfd4-proteina[all-cuda13]"``. System drivers and external metric tools are
 configured separately.
 
 TMol devices
@@ -129,9 +145,9 @@ Deployment options
      - Notes
    * - Workstation or cluster node, CUDA 13 driver
      - ``make setup``
-     - Default. Torch 2.14.1/cu132, ``metrics-cuda13`` extra. Creates ``.venv`` and caches the weights.
+     - Default. Torch 2.14.1/cu132, ``all-cuda13`` extra. Creates ``.venv`` and caches the weights.
    * - CUDA 12 driver
-     - ``uv pip install --no-sources --torch-backend cu126 -e '.[metrics-cuda12]'``
+     - ``uv pip install --no-sources --torch-backend cu126 -e '.[all-cuda12]'``
      - Torch 2.14.1/cu126 (PyTorch publishes no cu128/cu129 wheels for 2.14).
    * - CPU only
      - ``uv pip install --no-sources --torch-backend cpu -e .``
@@ -144,7 +160,7 @@ Deployment options
      - Convert the Docker image; pass ``--nv`` at run time.
    * - PyPI
      - ``uv pip install rfd4-proteina``
-     - Add the ``metrics-cuda12`` or ``metrics-cuda13`` extra to match the driver. ``uv`` is about five times faster than ``pip`` for this environment; ``pip install`` also works.
+     - Add the ``all-cuda12`` or ``all-cuda13`` extra to match the driver. ``uv`` is about five times faster than ``pip`` for this environment; ``pip install`` also works.
 
 The CUDA profiles accept cuEquivariance 0.13.x and TMol 0.2.x with the CUDA-major operator package; the container images pin the exact versions.
 Linux x86_64 is the qualified platform; the pinned wheels also exist for aarch64 but are not
@@ -173,10 +189,10 @@ be selected explicitly:
      - Installs
      - Operators
    * - ``cu13`` (default)
-     - ``.[metrics-cuda13]``, Torch cu130
+     - ``.[all-cuda13]``, Torch cu130
      - ``tmol-ops-cu13``, cuEquivariance cu13
    * - ``cu12``
-     - ``.[metrics-cuda12]``, Torch cu126
+     - ``.[all-cuda12]``, Torch cu126
      - ``tmol-ops-cu12``, cuEquivariance cu12
    * - ``cpu``
      - no metrics extra, Torch cpu

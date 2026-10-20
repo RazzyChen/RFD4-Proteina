@@ -8,7 +8,7 @@ instead, with the same input and sampling options:
 rfd4-generate inputs=data/benchmarks/monomer out_dir=./runs/bioir inference_backend=bioir
 ```
 
-BioIR is built for CUDA 13. Install it with `pip install "rfd4-proteina[metrics-cuda13,bioir]"`; the cu13
+BioIR is built for CUDA 13. Install it with `pip install "rfd4-proteina[all-cuda13]"`; the cu13
 Docker image ships it, and the cu12 and cpu images stay native. It runs the released checkpoints,
 including the 147-class autoencoder, wide recycle conditioning and the checkpoint's LoRA adapters (folded
 into the base weights when the model loads).

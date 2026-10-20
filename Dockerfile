@@ -7,8 +7,8 @@
 #   docker build --build-arg RFD4_ACCELERATOR=cpu  -t rfd4-proteina:cpu  .
 #
 # RFD4_ACCELERATOR selects the extra and the Torch wheel index, nothing else:
-#   cu13 -> .[metrics-cuda13], Torch cu130, tmol-ops-cu13
-#   cu12 -> .[metrics-cuda12], Torch cu126, tmol-ops-cu12
+#   cu13 -> .[all-cuda13], Torch cu130, tmol-ops-cu13
+#   cu12 -> .[all-cuda12], Torch cu126, tmol-ops-cu12
 #   cpu  -> no metrics extra,  Torch cpu,   no CUDA operators
 #
 # Everything installs from public PyPI and the public PyTorch index. `--no-sources`
@@ -44,8 +44,8 @@ WORKDIR /opt/rfd4
 # TMol and its operators must come from published wheels (never a source build).
 COPY pyproject.toml ./
 RUN case "${RFD4_ACCELERATOR}" in \
-        cu13) set -- --extra metrics-cuda13 --torch-backend cu130 ;; \
-        cu12) set -- --extra metrics-cuda12 --torch-backend cu126 ;; \
+        cu13) set -- --extra all-cuda13 --torch-backend cu130 ;; \
+        cu12) set -- --extra all-cuda12 --torch-backend cu126 ;; \
         cpu) set -- --torch-backend cpu ;; \
         *) echo "RFD4_ACCELERATOR must be one of: cu13, cu12, cpu" >&2; exit 2 ;; \
     esac && \
@@ -57,15 +57,14 @@ COPY . .
 RUN uv pip install --system --no-cache --no-sources --no-deps . && \
     python -m pip check
 
-# BioIR: the accelerated runtime behind inference_backend=bioir, from PyPI at the version pyproject.toml pins.
-# It is built against CUDA 13, so only the cu13 profile installs it; cu12 and cpu stay on the native runtime.
-# --no-deps keeps the runtime resolved above; lru-dict and nvidia-cudnn-frontend are the
-# reusable-blocks dependencies the metrics-cuda13 extra does not already install.
+# BioIR (inference_backend=bioir) comes with the all-cuda13 extra; cu12 and cpu stay on the native runtime.
 RUN if [ "${RFD4_ACCELERATOR}" = "cu13" ]; then \
-        bioir="$(grep -oE 'bionemo-ir==[0-9A-Za-z.]+' pyproject.toml | head -n 1)" && \
-        test -n "${bioir}" && \
-        uv pip install --system --no-cache --no-deps "${bioir}" "lru-dict==1.4.1" "nvidia-cudnn-frontend==1.23.0" && \
         python -c "from bionemo_ir._torch.layers.transformers.blocks import ConditionedTransformerBlock, PairUpdateBlock, with_cuda_graph"; \
+    fi
+
+# The cpu profile has no CUDA extra; install the physics metrics it needs directly.
+RUN if [ "${RFD4_ACCELERATOR}" = "cpu" ]; then \
+        uv pip install --system --no-cache --only-binary tmol "tmol>=0.2.0,<0.3" posebusters; \
     fi
 
 RUN mkdir -p /data /opt/rfd4/cache/huggingface /workspace
@@ -73,7 +72,7 @@ WORKDIR /workspace
 
 # Smoke test: imports, TMol operators for the selected profile, Inductor, and the CLI.
 RUN TORCHINDUCTOR_CACHE_DIR=/tmp/rfd4-build-compile RFD4_ACCELERATOR="${RFD4_ACCELERATOR}" python -c \
-        'import os; from importlib.metadata import distributions, version; import torch, atomworks, rfd4_proteina; from openbabel import pybel; from tmol.score.ljlk.potentials._compiled import ljlk_pose_scores; accelerator = os.environ["RFD4_ACCELERATOR"]; import re; pin = re.search("torch==([0-9.]+)", open("/opt/rfd4/pyproject.toml").read()).group(1); assert torch.__version__ == pin + "+" + {"cu13": "cu130", "cu12": "cu126", "cpu": "cpu"}[accelerator]; assert pybel.readstring("smi", "CCO").OBMol.NumAtoms() == 3; assert callable(ljlk_pose_scores); ops = {d.metadata["Name"].lower().replace("_", "-") for d in distributions() if d.metadata["Name"].lower().replace("_", "-").startswith("tmol-ops-")}; assert ops == (set() if accelerator == "cpu" else {"tmol-ops-" + accelerator}), ops; x = torch.ones(8); torch.testing.assert_close(torch.compile(lambda t: t.sin() + 1, backend="inductor", fullgraph=True)(x), x.sin() + 1)' && \
+        'import os; from importlib.metadata import distributions, version; import torch, atomworks, rfproteina; from openbabel import pybel; from tmol.score.ljlk.potentials._compiled import ljlk_pose_scores; accelerator = os.environ["RFD4_ACCELERATOR"]; assert torch.__version__.endswith("+" + {"cu13": "cu130", "cu12": "cu126", "cpu": "cpu"}[accelerator]); assert pybel.readstring("smi", "CCO").OBMol.NumAtoms() == 3; assert callable(ljlk_pose_scores); ops = {d.metadata["Name"].lower().replace("_", "-") for d in distributions() if d.metadata["Name"].lower().replace("_", "-").startswith("tmol-ops-")}; assert ops == (set() if accelerator == "cpu" else {"tmol-ops-" + accelerator}), ops; x = torch.ones(8); torch.testing.assert_close(torch.compile(lambda t: t.sin() + 1, backend="inductor", fullgraph=True)(x), x.sin() + 1)' && \
     rm -rf /tmp/rfd4-build-compile && \
     rfd4-generate --help
 
