@@ -91,7 +91,8 @@ Docker and Apptainer, see :doc:`installation`.
    <quickstart-make-setup>`.
 
 The wheel is small (about 1 MB): it ships the code, the configs and the monomer example input, not the
-benchmark inputs or the antibody torsion reference data. Clone the repository (option 1) to use those.
+benchmark inputs. The antibody torsion reference data is downloaded when that metric is first used. Clone the repository
+(option 1) to use the benchmark inputs.
 
 Create an environment, install the package for your CUDA major version, and generate:
 

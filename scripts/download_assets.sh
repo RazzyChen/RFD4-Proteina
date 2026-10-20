@@ -41,6 +41,9 @@ if [ "$SKIP_BENCHMARKS" = false ]; then
         hf download "$BENCHMARKS_REPO" --repo-type dataset ${RFD4_BENCHMARKS_REVISION:+--revision "$RFD4_BENCHMARKS_REVISION"} \
             --include "benchmarks/$benchmark/*" --local-dir "$REPO_ROOT/data"
     done
+    echo ">>> Caching the CDR torsion reference data for the antibody metric (Hugging Face cache)..."
+    hf download "$BENCHMARKS_REPO" --repo-type dataset ${RFD4_BENCHMARKS_REVISION:+--revision "$RFD4_BENCHMARKS_REVISION"} \
+        --include "metrics/cdr_torsion_data/*"
 fi
 
 if [ "$WITH_TEST_DATASET" = true ]; then

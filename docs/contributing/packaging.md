@@ -27,8 +27,8 @@ The wheel is built from the sdist. Both contain model code, CLI entry points,
 Hydra configs and the quickstart example input `data/benchmarks/monomer` (about
 1 MB in total). Tests, docs, skills, the website, the repository scripts tree, all
 other benchmark inputs and the CDR torsion reference data (the opt-in
-`cdr_torsion_naturalness` metric) are not packaged, so a pip install cannot run the
-validation or benchmark configs or that metric; clone the repository for those and run `make setup`, which downloads the two large validation
+`cdr_torsion_naturalness` metric downloads it on first use) are not packaged, so a pip install cannot run the
+validation or benchmark configs; clone the repository for those and run `make setup`, which downloads the two large validation
 benchmark sets (about 63 MB) from Hugging Face.
 `scripts/check_distribution.py` enforces these rules and a 2 MB size ceiling.
 The optional PyRosetta helper stays beside its runtime metric.

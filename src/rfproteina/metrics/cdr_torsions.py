@@ -2,6 +2,7 @@
 
 import gzip
 import json
+import os
 from functools import cached_property, lru_cache
 from itertools import pairwise
 from pathlib import Path
@@ -14,11 +15,38 @@ from biotite.structure import (
     filter_amino_acids,
     get_residue_starts,
 )
+from huggingface_hub import snapshot_download
 from scipy.integrate import quad
 from scipy.special import i0e, logsumexp
 
 from rfproteina.metrics.antibody_metrics import CDR_RANGES, annotate_antibody_numbering
 from rfproteina.metrics.metric import Metric
+
+CDR_REFERENCE_REPO = "nvidia/RFD4-Proteina"
+CDR_REFERENCE_SUBDIR = "metrics/cdr_torsion_data"
+
+
+@lru_cache(maxsize=1)
+def reference_data_dir() -> Path:
+    """Locate the CDR torsion reference data, downloading it once when it is not installed.
+
+    ``RFD4_CDR_TORSION_DATA`` names a directory to use, a ``cdr_torsion_data`` directory next to this module is
+    used when present, and otherwise the files come from the Hugging Face dataset repository into the local cache.
+    """
+    override = os.environ.get("RFD4_CDR_TORSION_DATA")
+    if override:
+        return Path(override)
+    local = Path(__file__).with_name("cdr_torsion_data")
+    if local.is_dir():
+        return local
+    try:
+        root = snapshot_download(CDR_REFERENCE_REPO, repo_type="dataset", allow_patterns=[f"{CDR_REFERENCE_SUBDIR}/*"])
+    except Exception as exc:
+        raise FileNotFoundError(
+            f"The CDR torsion reference data is not installed and could not be downloaded from {CDR_REFERENCE_REPO} "
+            f"({CDR_REFERENCE_SUBDIR}/). Download it manually and set RFD4_CDR_TORSION_DATA to its directory."
+        ) from exc
+    return Path(root) / CDR_REFERENCE_SUBDIR
 
 
 @lru_cache(maxsize=128)
@@ -99,14 +127,14 @@ class CDRTorsionNaturalness(Metric):
     def parameters(self) -> dict[str, Any]:
         result = {}
         for reference in ("vhh", "vhvl"):
-            path = Path(__file__).with_name("cdr_torsion_data") / f"{reference}_parameters.json.gz"
+            path = reference_data_dir() / f"{reference}_parameters.json.gz"
             with gzip.open(path, "rt") as file:
                 result[reference] = json.load(file)
         return result
 
     @cached_property
     def native_samples(self) -> dict[str, dict[str, np.ndarray]]:
-        root = Path(__file__).with_name("cdr_torsion_data")
+        root = reference_data_dir()
         result = {}
         for reference in ("vhh", "vhvl"):
             path = root / f"{reference}_torsions.npz"
@@ -118,11 +146,6 @@ class CDRTorsionNaturalness(Metric):
 
     def setup(self) -> None:
         """Check reference data before scoring designs."""
-        if not Path(__file__).with_name("cdr_torsion_data").is_dir():
-            raise FileNotFoundError(
-                "The CDR torsion reference data is not part of the PyPI package. Use a clone of the GitHub "
-                "repository (src/rfproteina/metrics/cdr_torsion_data/) to run cdr_torsion_naturalness."
-            )
         _ = self.parameters, self.native_samples
 
     def teardown(self) -> None:
