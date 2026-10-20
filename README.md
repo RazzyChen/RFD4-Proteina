@@ -110,7 +110,7 @@ about two minutes on a fresh cluster node where plain `pip` takes about ten; `pi
 
 The model can also be run as a Hugging Face Diffusers pipeline. The [quickstart](https://rfd4-proteina.org/latest/quickstart.html) covers all three routes in order: GitHub clone, PyPI and Diffusers.
 
-Add `inference_backend=bioir` to use the BioIR runtime (included in `all-cuda13`). `all-cuda12` and the plain package
+The CUDA extra also installs the fused cuEquivariance kernels the model loads, so use it even if you skip metrics. Add `inference_backend=bioir` to use the BioIR runtime (included in `all-cuda13`). `all-cuda12` and the plain package
 use the native runtime. If `pip` cannot see a very recent release, retry with `--no-cache-dir`.
 
 ## Run the model

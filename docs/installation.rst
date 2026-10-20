@@ -108,10 +108,11 @@ TMol and cuEquivariance operator wheels (``tmol-ops-cu12`` or ``tmol-ops-cu13``)
    * - Extra
      - Adds
    * - (none)
-     - Generation, evaluation with the default metrics, Hugging Face checkpoints.
+     - Generation, evaluation with the default metrics, Hugging Face checkpoints. Runs without the fused cuEquivariance
+       kernels, so use a CUDA extra for speed.
    * - ``all-cuda13``
-     - TMol with ``tmol-ops-cu13``, cuEquivariance, the CUTLASS DSL kernels, PoseBusters, scikit-learn and the BioIR
-       runtime for ``inference_backend=bioir``.
+     - TMol with ``tmol-ops-cu13``, the fused cuEquivariance and CUTLASS DSL kernels, PoseBusters, the training and
+       analysis tools (matplotlib, scikit-learn, boto3) and the BioIR runtime for ``inference_backend=bioir``.
    * - ``all-cuda12``
      - The same with ``tmol-ops-cu12`` and the CUDA 12 cuEquivariance operators, without BioIR (CUDA 13 only).
 
