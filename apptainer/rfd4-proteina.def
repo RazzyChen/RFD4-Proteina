@@ -66,8 +66,11 @@ From: python:3.12.12-slim-bookworm
     python -m pip check
 
     # Smoke test: imports, TMol operators for the selected profile, Inductor, and the CLI.
-    ACCELERATOR="${ACCELERATOR}" TORCHINDUCTOR_CACHE_DIR=/tmp/rfd4-build-compile python /opt/rfd4/smoke_test.py
-    rm -rf /tmp/rfd4-build-compile
+    # A private TMPDIR keeps Inductor off any host /tmp directory that the build user does not own.
+    mkdir -p /opt/rfd4-build-tmp
+    ACCELERATOR="${ACCELERATOR}" TMPDIR=/opt/rfd4-build-tmp TORCHINDUCTOR_CACHE_DIR=/opt/rfd4-build-tmp/inductor \
+        python /opt/rfd4/smoke_test.py
+    rm -rf /opt/rfd4-build-tmp
     rfd4-generate --help > /dev/null
     mkdir -p /data /workspace
 
