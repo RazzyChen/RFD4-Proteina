@@ -64,7 +64,7 @@ dependencies = [
     "scikit-learn",
     # Validation metrics
     "posebusters",
-    "tmol>=0.1.64,<0.2",
+    "tmol>=0.2.0,<0.3",
     "anarcii>=2.0.8,<3",
     "assertpy",
 ]
@@ -83,14 +83,14 @@ docs = [
 ]
 # Select the metrics dependencies matching the CUDA stack.
 metrics-cuda12 = [
-    "tmol[cu12]>=0.1.64,<0.2; sys_platform == 'linux'",
+    "tmol[cu12]>=0.2.0,<0.3; sys_platform == 'linux'",
     "cuequivariance>=0.13.0,<0.14; sys_platform == 'linux'",
     "cuequivariance-torch>=0.13.0,<0.14; sys_platform == 'linux'",
     "cuequivariance-ops-cu12>=0.13.0,<0.14; sys_platform == 'linux'",
     "cuequivariance-ops-torch-cu12>=0.13.0,<0.14; sys_platform == 'linux'",
 ]
 metrics-cuda13 = [
-    "tmol[cu13]>=0.1.64,<0.2; sys_platform == 'linux'",
+    "tmol[cu13]>=0.2.0,<0.3; sys_platform == 'linux'",
     # PyTorch's CuTe RMSNorm kernels require both CUTLASS DSL and TVM FFI.
     "apache-tvm-ffi>=0.1.14,<0.2; sys_platform == 'linux'",
     "cuda-core>=1.0.1,<2; sys_platform == 'linux'",

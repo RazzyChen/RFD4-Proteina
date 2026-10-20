@@ -55,7 +55,7 @@ Clone and run setup:
    make setup
 
 This creates ``.venv`` and installs the dependencies declared in ``pyproject.toml``,
-including CUDA metrics and TMol 0.1.64. It downloads the configured released model
+including CUDA metrics and TMol 0.2.0. It downloads the configured released model
 weights and configures ``DATA_PATH`` for checkpoints and optional data. It also downloads the two validation
 benchmark sets (about 63 MB) from Hugging Face into ``data/benchmarks/``; use ``bash setup.sh --skip-benchmarks`` to skip them.
 Use ``bash setup.sh --skip-weights`` for an environment-only install.
@@ -97,7 +97,7 @@ Hydra configs and benchmark inputs. A wheel install reads local environment
 files from the working directory; an editable install reads them from the
 checkout root.
 
-AtomWorks is installed from the project metadata. TMol 0.1.64 provides CPU operators
+AtomWorks is installed from the project metadata. TMol 0.2.0 provides CPU operators
 in the base package; the ``metrics-cuda12`` and ``metrics-cuda13`` extras install the
 matching CUDA-major operator package. System drivers and external metric tools are
 configured separately.
@@ -105,8 +105,8 @@ configured separately.
 TMol devices
 ~~~~~~~~~~~~
 
-TMol metrics default to ``device="cuda"``. Install ``tmol[cu12]==0.1.64`` or
-``tmol[cu13]==0.1.64`` for the selected CUDA major; the nonexistent package names
+TMol metrics default to ``device="cuda"``. Install ``tmol[cu12]>=0.2.0`` or
+``tmol[cu13]>=0.2.0`` for the selected CUDA major; the nonexistent package names
 ``tmol-ops-cuda12`` and ``tmol-ops-cuda13`` are not valid. Missing CUDA operators
 raise an actionable error and never route automatically to CPU. Use
 ``device="cpu"`` to request CPU scoring explicitly. TMol's build-time headers do
@@ -146,7 +146,7 @@ Deployment options
      - ``uv pip install rfd4-proteina``
      - Add the ``metrics-cuda12`` or ``metrics-cuda13`` extra to match the driver. ``uv`` is about five times faster than ``pip`` for this environment; ``pip install`` also works.
 
-The CUDA profiles accept cuEquivariance 0.13.x and TMol 0.1.x with the CUDA-major operator package; the container images pin the exact versions.
+The CUDA profiles accept cuEquivariance 0.13.x and TMol 0.2.x with the CUDA-major operator package; the container images pin the exact versions.
 Linux x86_64 is the qualified platform; the pinned wheels also exist for aarch64 but are not
 qualified. The optional BioIR backend is a separate runtime that these installs do not include yet.
 

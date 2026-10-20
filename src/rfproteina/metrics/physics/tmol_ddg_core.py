@@ -16,7 +16,7 @@ from atomworks.io.utils.standard_annotations import STANDARD_ANNOTATIONS
 from biotite.structure import AtomArray, get_residue_starts
 from scipy.spatial import cKDTree
 from tmol.database import ParameterDatabase
-from tmol.io import PoseBuildContext, pose_stack_from_biotite
+from tmol.io import PoseBuildContext, pose_stack_from_atom_array
 from tmol.kinematics import CartesianMoveMap, FoldForest, MoveMap
 from tmol.optimization import run_kin_min
 from tmol.pack import PackerPalette, PackerTask, pack_rotamers
@@ -192,9 +192,9 @@ def build_pose_and_masks(
     """
     chemistry_array = prepare_tmol_atom_array(atom_array)
     if context is not None:
-        pose_stack = pose_stack_from_biotite(chemistry_array, device, context=context, no_optH=no_opt_h)
+        pose_stack = pose_stack_from_atom_array(chemistry_array, device, context=context, no_optH=no_opt_h)
     else:
-        pose_stack = pose_stack_from_biotite(chemistry_array, device, prepare_ligands=True, no_optH=no_opt_h)
+        pose_stack = pose_stack_from_atom_array(chemistry_array, device, prepare_ligands=True, no_optH=no_opt_h)
 
     if region_a is not None and region_b is not None:
         mask_a = region_query_to_block_mask(

@@ -9,7 +9,7 @@ import rfd4_proteina as rfd4
 `rfd4_proteina` exposes the implementation currently in `rfproteina`.
 Packaging does not rename modules, checkpoint references or Hydra targets;
 an internal rename is a separate change.
-The package supports Python 3.12 and requires AtomWorks 3.0.4 and TMol 0.1.64.
+The package supports Python 3.12 and requires AtomWorks 3.0.4 and TMol 0.2.0.
 Publish those dependencies first, with no Git requirements in their PyPI metadata.
 TMol's CUDA operators must match the CUDA major; see the
 [installation guide](../installation.rst) for the published CPU and CUDA extras.
