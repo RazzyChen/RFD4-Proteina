@@ -11,15 +11,18 @@ if [[ "${1:-}" == --venv && $# == 1 ]]; then
 fi
 download_weights=true
 search_envs=true
+skip_benchmarks=false
 for arg in "$@"; do
     case "$arg" in
         --native) ;;
         --skip-weights) download_weights=false ;;
         --skip-search-envs) search_envs=false ;;
+        --skip-benchmarks) skip_benchmarks=true ;;
         -h|--help)
-            echo "Usage: bash setup.sh [--native] [--skip-weights] [--skip-search-envs] | --venv"
+            echo "Usage: bash setup.sh [--native] [--skip-weights] [--skip-search-envs] [--skip-benchmarks] | --venv"
             echo "Install a native .venv and the configured released model."
             echo "Use --skip-weights for an environment-only install."
+            echo "Setup also downloads the validation benchmarks (about 63 MB) into data/benchmarks/; use --skip-benchmarks to skip them."
             echo "Setup then asks whether to add AlphaFold 2 and AlphaFold 3 / OpenFold3 environments for search;"
             echo "use --skip-search-envs to skip those questions (scripts/setup_search_envs.sh runs them later)."
             echo "Use --native to select native setup in an IPD checkout; --venv adds development tools."
@@ -40,7 +43,9 @@ if [[ "$download_weights" == true ]]; then
         printf '\nDATA_PATH=${PROJECT_ROOT}/data_path\n' >> "$rfproteina_env_file"
         export DATA_PATH="$PROJECT_ROOT/data_path"
     fi
-    PATH="$repo_root/.venv/bin:$PATH" bash "$repo_root/scripts/download_assets.sh" "$DATA_PATH" --skip-of3
+    download_args=(--skip-of3)
+    [[ "$skip_benchmarks" == true ]] && download_args+=(--skip-benchmarks)
+    PATH="$repo_root/.venv/bin:$PATH" bash "$repo_root/scripts/download_assets.sh" "$DATA_PATH" "${download_args[@]}"
     echo 'Configured released model is ready.'
 fi
 if [[ "$search_envs" == true ]]; then

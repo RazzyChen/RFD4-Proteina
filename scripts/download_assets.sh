@@ -4,20 +4,23 @@ set -euo pipefail
 
 DATA_PATH="${1:-}"
 if [ -z "$DATA_PATH" ] || [ "${DATA_PATH:0:1}" = "-" ]; then
-    echo "Usage: $0 <DATA_PATH> [--with-test-dataset] [--skip-of3]" >&2
+    echo "Usage: $0 <DATA_PATH> [--with-test-dataset] [--skip-of3] [--skip-benchmarks]" >&2
     exit 1
 fi
 shift
 WITH_TEST_DATASET=false
 SKIP_OF3=false
+SKIP_BENCHMARKS=false
 for arg in "$@"; do
     case "$arg" in
         --with-test-dataset) WITH_TEST_DATASET=true ;;
         --skip-of3) SKIP_OF3=true ;;
+        --skip-benchmarks) SKIP_BENCHMARKS=true ;;
         *) echo "Unknown argument: $arg" >&2; exit 1 ;;
     esac
 done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/oracle_artifacts.sh"
 INFERENCE_CONFIG="$SCRIPT_DIR/../configs/inference.yaml"
 resolve_hf_release "$INFERENCE_CONFIG"
@@ -30,6 +33,15 @@ fetch() {
 
 echo ">>> Caching the released model from Hugging Face ($REPO; HF_HOME controls the cache location)..."
 hf download "$REPO" config.json model.safetensors ${REVISION:+--revision "$REVISION"}
+
+if [ "$SKIP_BENCHMARKS" = false ]; then
+    BENCHMARKS_REPO="${RFD4_BENCHMARKS_REPO:-nvidia/RFD4-Proteina}"
+    echo ">>> Downloading the validation benchmarks from Hugging Face ($BENCHMARKS_REPO, about 63 MB) into data/benchmarks/..."
+    for benchmark in ae_pdb_temporal_holdout_2026_10_04 nanobody; do
+        hf download "$BENCHMARKS_REPO" --repo-type dataset ${RFD4_BENCHMARKS_REVISION:+--revision "$RFD4_BENCHMARKS_REVISION"} \
+            --include "benchmarks/$benchmark/*" --local-dir "$REPO_ROOT/data"
+    done
+fi
 
 if [ "$WITH_TEST_DATASET" = true ]; then
     echo ">>> test_dataset..."

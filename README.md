@@ -22,8 +22,8 @@
 </p>
 
 <picture>
-  <source media="(max-width: 600px)" srcset="https://raw.githubusercontent.com/RosettaCommons/RFD4-Proteina/main/assets/readme/design-gallery-mobile.png">
-  <img src="https://raw.githubusercontent.com/RosettaCommons/RFD4-Proteina/main/assets/readme/design-gallery.png" width="1050" alt="Nanobody complex, protein–DNA binder, RNA pseudoknot, ligand pocket, glycan complex, and protein assembly.">
+  <source media="(max-width: 600px)" srcset="https://huggingface.co/datasets/nvidia/RFD4-Proteina/resolve/main/media/assets/readme/design-gallery-mobile.png">
+  <img src="https://huggingface.co/datasets/nvidia/RFD4-Proteina/resolve/main/media/assets/readme/design-gallery.png" width="1050" alt="Nanobody complex, protein–DNA binder, RNA pseudoknot, ligand pocket, glycan complex, and protein assembly.">
 </picture>
 
 RFD4-Proteina designs proteins and biomolecular complexes with sequence–structure co-design,
@@ -176,5 +176,5 @@ Training datasets are separate from model downloads: see the
 [Documentation](https://rosettacommons.github.io/RFD4-Proteina/) · [Contributing](https://rosettacommons.github.io/RFD4-Proteina/contributing/index.html) · [BSD 3-Clause license](https://github.com/RosettaCommons/RFD4-Proteina/blob/main/LICENSE)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/RosettaCommons/RFD4-Proteina/main/assets/readme/dna-binder-generation.gif" width="360" alt="Protein-binder generation conditioned on a DNA duplex.">
+  <img src="https://huggingface.co/datasets/nvidia/RFD4-Proteina/resolve/main/media/assets/readme/dna-binder-generation.gif" width="360" alt="Protein-binder generation conditioned on a DNA duplex.">
 </p>

@@ -1,3 +1,5 @@
+# Needs data/benchmarks/ae_pdb_temporal_holdout_2026_10_04/, which `make setup` (scripts/download_assets.sh) downloads from
+# Hugging Face (nvidia/RFD4-Proteina, benchmarks/). It is not stored in git or shipped in the PyPI package.
 dataset:
   _target_: rfproteina.inference_utils.datasets.DesignProblemDataset
   dir_path_or_file_paths: ${oc.env:PROJECT_ROOT}/data/benchmarks/ae_pdb_temporal_holdout_2026_10_04

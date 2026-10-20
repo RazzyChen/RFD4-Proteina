@@ -32,7 +32,7 @@ RFD4-Proteina
        </div>
      </div>
      <figure class="hero-figure">
-       <img src="_static/hero-protein.png"
+       <img src="https://huggingface.co/datasets/nvidia/RFD4-Proteina/resolve/main/media/docs/_static/hero-protein.png"
             alt="A designed protein shown as a teal ribbon, wrapped around a small molecule ligand
                  drawn in pink at its binding pocket.">
      </figure>

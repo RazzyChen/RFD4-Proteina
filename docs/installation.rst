@@ -56,7 +56,8 @@ Clone and run setup:
 
 This creates ``.venv`` and installs the dependencies declared in ``pyproject.toml``,
 including CUDA metrics and TMol 0.1.64. It downloads the configured released model
-weights and configures ``DATA_PATH`` for checkpoints and optional data.
+weights and configures ``DATA_PATH`` for checkpoints and optional data. It also downloads the two validation
+benchmark sets (about 63 MB) from Hugging Face into ``data/benchmarks/``; use ``bash setup.sh --skip-benchmarks`` to skip them.
 Use ``bash setup.sh --skip-weights`` for an environment-only install.
 
 Setup then asks whether to add the environments that reward-guided search and the refolding

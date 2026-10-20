@@ -267,6 +267,9 @@ tests/data/pdb/*
 !website/assets/**
 !data/benchmarks
 !data/benchmarks/**
+# Downloaded by scripts/download_assets.sh from Hugging Face (nvidia/RFD4-Proteina, benchmarks/); not stored in git.
+data/benchmarks/ae_pdb_temporal_holdout_2026_10_04/
+data/benchmarks/nanobody/
 !.ipd/benchmarks
 !.ipd/benchmarks/**
 
