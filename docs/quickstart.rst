@@ -85,11 +85,6 @@ Docker and Apptainer, see :doc:`installation`.
 2. Install from PyPI
 --------------------
 
-.. note::
-
-   The PyPI release is pending. Until it is published, use :ref:`option 1
-   <quickstart-make-setup>`.
-
 The wheel is small (about 1 MB): it ships the code, the configs and the monomer example input, not the
 benchmark inputs. The antibody torsion reference data is downloaded when that metric is first used. Clone the repository
 (option 1) to use the benchmark inputs.
