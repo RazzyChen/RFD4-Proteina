@@ -50,7 +50,7 @@ Mitigation: The skill frames reward as a proxy and advises experimental validati
 - `src/rfproteina/search/beam_search.py`, `src/rfproteina/metrics/oracles/pass_criterion_metric.py`, `src/rfproteina/metrics/oracles/oracle_metric.py`
 - `scripts/launch_generate.sh`
 - rfd4-proteina-setup skill (`https://github.com/RosettaCommons/RFD4-Proteina/blob/main/docs/installation.rst` for refolding backends)
-- RFD4-Proteina website: https://rosettacommons.github.io/RFD4-Proteina/
+- RFD4-Proteina website: https://rfd4-proteina.org/
 - NVIDIA agent skills: https://docs.nvidia.com/skills
 
 ## Skill Output

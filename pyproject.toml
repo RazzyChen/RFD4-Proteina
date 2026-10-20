@@ -132,8 +132,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://rosettacommons.github.io/RFD4-Proteina/"
-Documentation = "https://rosettacommons.github.io/RFD4-Proteina/"
+Homepage = "https://rfd4-proteina.org/"
+Documentation = "https://rfd4-proteina.org/latest/"
 Repository = "https://github.com/RosettaCommons/RFD4-Proteina"
 Issues = "https://github.com/RosettaCommons/RFD4-Proteina/issues"
 

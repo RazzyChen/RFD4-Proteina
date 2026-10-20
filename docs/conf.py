@@ -205,7 +205,7 @@ if _SITE_ROOT:
     html_js_files = [*html_js_files, ("site-nav.js", {"defer": "defer"})]
 html_favicon = "_static/favicon.svg"
 html_title = "RFD4-Proteina documentation"
-html_baseurl = "https://rosettacommons.github.io/RFD4-Proteina/latest/"
+html_baseurl = "https://rfd4-proteina.org/latest/"
 
 html_theme_options = {
     "show_nav_level": 2,
@@ -234,7 +234,7 @@ html_theme_options = {
             else [
                 {
                     "name": "Home",
-                    "url": "https://rosettacommons.github.io/RFD4-Proteina/",
+                    "url": "https://rfd4-proteina.org/",
                     "icon": "fa-solid fa-house",
                 }
             ]

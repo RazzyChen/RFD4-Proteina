@@ -77,7 +77,7 @@ Mitigation: Stated prominently and in the troubleshooting table.
 - `docs/examples.rst` and `skills/rfd4-proteina-generate/references/tasks/`
 - Example inputs: `data/benchmarks/`
 - Sibling skills: `rfd4-proteina-setup`, `rfd4-proteina-annotated-cif`, `rfd4-proteina-search`, `rfd4-proteina-evaluate`
-- RFD4-Proteina website: https://rosettacommons.github.io/RFD4-Proteina/
+- RFD4-Proteina website: https://rfd4-proteina.org/
 - NVIDIA agent skills: https://docs.nvidia.com/skills
 
 ## Skill Output

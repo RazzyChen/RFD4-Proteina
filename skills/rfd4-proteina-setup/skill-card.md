@@ -47,7 +47,7 @@ Mitigation: Private setup appends a marked block only when absent and offers an 
 
 - `docs/how-to/run-the-model.md`, `docs/how-to/input_prep/index.md`
 - `setup.sh`, `scripts/download_assets.sh`, `configs/inference.yaml`
-- RFD4-Proteina website: https://rosettacommons.github.io/RFD4-Proteina/
+- RFD4-Proteina website: https://rfd4-proteina.org/
 - NVIDIA agent skills: https://docs.nvidia.com/skills
 
 ## Skill Output

@@ -7,18 +7,19 @@
 <p align="center">
   <a href="https://codecov.io/gh/RosettaCommons/RFD4-Proteina/tree/main"><img src="https://codecov.io/gh/RosettaCommons/RFD4-Proteina/branch/main/graph/badge.svg" alt="Codecov coverage"></a>
   <a href="https://github.com/RosettaCommons/RFD4-Proteina/blob/main/pyproject.toml"><img src="https://img.shields.io/badge/python-3.12-blue?logo=python&amp;logoColor=white" alt="Python 3.12"></a>
-  <a href="https://rosettacommons.github.io/RFD4-Proteina/"><img src="https://img.shields.io/badge/docs-read-blue" alt="Documentation"></a>
+  <a href="https://rfd4-proteina.org/latest/"><img src="https://img.shields.io/badge/docs-read-blue" alt="Documentation"></a>
   <a href="https://huggingface.co/nvidia/RFD4-Proteina"><img src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-model-yellow" alt="Hugging Face model"></a>
   <a href="https://github.com/RosettaCommons/RFD4-Proteina/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg" alt="BSD 3-Clause License"></a>
 </p>
 
 <p align="center">
+  <a href="https://rfd4-proteina.org/">Project page</a> ·
   <a href="#system-requirements">Requirements</a> ·
   <a href="#install">Installation</a> ·
   <a href="#run-the-model">Quick start</a> ·
   <a href="#more-workflows">Workflows</a> ·
   <a href="#tutorials">Tutorials</a> ·
-  <a href="https://rosettacommons.github.io/RFD4-Proteina/">Documentation</a>
+  <a href="https://rfd4-proteina.org/latest/">Documentation</a>
 </p>
 
 <picture>
@@ -41,7 +42,7 @@ Key features:
 ## System requirements
 
 - Linux x86_64, Python 3.12, and an NVIDIA GPU with a CUDA 13-compatible driver (CUDA 12 and CPU-only containers are also available).
-- Tested GPUs: see the [supported hardware table](https://rosettacommons.github.io/RFD4-Proteina/installation.html#supported-hardware). Check yours with `nvidia-smi`.
+- Tested GPUs: see the [supported hardware table](https://rfd4-proteina.org/latest/installation.html#supported-hardware). Check yours with `nvidia-smi`.
 - macOS and Windows are not supported.
 
 ## Install
@@ -62,7 +63,7 @@ Notebooks are committed without outputs; run `pre-commit install` to enforce thi
 Setup installs the environment, caches the released Hugging Face model bundle
 (about 1.7 GB, including its autoencoder), and configures `DATA_PATH` for optional data.
 The cache location follows `HF_HOME`. See the
-[installation guide](https://rosettacommons.github.io/RFD4-Proteina/installation.html)
+[installation guide](https://rfd4-proteina.org/latest/installation.html)
 for CUDA build prerequisites, optional metrics, and cluster setup.
 
 Setup also asks whether to add an AlphaFold 2 or AlphaFold 3 / OpenFold3 environment for
@@ -70,7 +71,7 @@ reward-guided search and refolding metrics (and, if so, your CPU architecture an
 Skip that with `bash setup.sh --skip-search-envs`; run it later with `bash scripts/setup_search_envs.sh`.
 
 Other options (CUDA 12, CPU-only, Docker, Apptainer, pip) are listed in the
-[deployment options](https://rosettacommons.github.io/RFD4-Proteina/installation.html#deployment-options).
+[deployment options](https://rfd4-proteina.org/latest/installation.html#deployment-options).
 For example, a container with CUDA 13 (use `RFD4_ACCELERATOR=cu12` or `cpu` for the others):
 
 ```bash
@@ -89,13 +90,13 @@ On Linux x86_64 with Python 3.12, an NVIDIA GPU and a CUDA 13-compatible driver:
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install "rfd4-proteina[metrics-cuda13,bioir] @ git+https://github.com/RosettaCommons/RFD4-Proteina.git"
+pip install "rfd4-proteina[metrics-cuda13,bioir]"
 
 EXAMPLE=$(python -c "import rfproteina, pathlib; print(pathlib.Path(rfproteina.__file__).parent / 'data/benchmarks/monomer/monomer-short.cif')")
 rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina inputs=$EXAMPLE num_replicates=1 out_dir=./runs/first ~metrics
 ```
 
-The model can also be run as a Hugging Face Diffusers pipeline. The [quickstart](https://rosettacommons.github.io/RFD4-Proteina/quickstart.html) covers all three routes in order: GitHub clone, PyPI and Diffusers.
+The model can also be run as a Hugging Face Diffusers pipeline. The [quickstart](https://rfd4-proteina.org/latest/quickstart.html) covers all three routes in order: GitHub clone, PyPI and Diffusers.
 
 Add `inference_backend=bioir` to use the BioIR runtime (installed by the `bioir` extra). Drop the `bioir` extra
 for a native-only install. If `pip` cannot see a very recent release, retry with `--no-cache-dir`.
@@ -112,7 +113,7 @@ rfd4-generate inputs=data/benchmarks/monomer/monomer-short.cif \
 
 Designs are written to `runs/first/inference_samples/`. Increase `num_replicates`
 for more designs, or replace the example path
-with your own [annotated input](https://rosettacommons.github.io/RFD4-Proteina/how-to/input_prep/index.html).
+with your own [annotated input](https://rfd4-proteina.org/latest/how-to/input_prep/index.html).
 
 ### Hugging Face and Python
 
@@ -124,7 +125,7 @@ rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
     inputs=design.yaml out_dir=./runs/hf ~metrics compile_lengths=null
 ```
 
-After the package is published, install it with `pip install rfd4-proteina` on a
+Install it with `pip install rfd4-proteina` on a
 supported CUDA/Python system. The same API works from an installed development checkout:
 
 ```python
@@ -150,20 +151,20 @@ For a native local checkpoint, set `hf_ckpt_path=null`,
 `ckpt_path=/path/to/checkpoints`, `ckpt_name=model.ckpt`, and
 `autoencoder_ckpt_path=/path/to/ae.ckpt`.
 Training datasets are separate from model downloads: see the
-[training guide](https://rosettacommons.github.io/RFD4-Proteina/contributing/developer-guide.html).
+[training guide](https://rfd4-proteina.org/latest/contributing/developer-guide.html).
 
-- [Running the model](https://rosettacommons.github.io/RFD4-Proteina/how-to/run-the-model.html): binders, motif scaffolding, partial diffusion, and sampling settings.
-- [Input preparation](https://rosettacommons.github.io/RFD4-Proteina/how-to/input_prep/index.html) · [Text-based design specifications](https://rosettacommons.github.io/RFD4-Proteina/how-to/input_prep/yaml-json.html)
-- [Scoring and refolding](https://rosettacommons.github.io/RFD4-Proteina/how-to/evaluate-with-metrics.html) · [Reward-guided search](https://rosettacommons.github.io/RFD4-Proteina/how-to/search.html)
-- [Training and fine-tuning](https://rosettacommons.github.io/RFD4-Proteina/contributing/developer-guide.html) · [Worked examples](https://rosettacommons.github.io/RFD4-Proteina/examples/index.html)
+- [Running the model](https://rfd4-proteina.org/latest/how-to/run-the-model.html): binders, motif scaffolding, partial diffusion, and sampling settings.
+- [Input preparation](https://rfd4-proteina.org/latest/how-to/input_prep/index.html) · [Text-based design specifications](https://rfd4-proteina.org/latest/how-to/input_prep/yaml-json.html)
+- [Scoring and refolding](https://rfd4-proteina.org/latest/how-to/evaluate-with-metrics.html) · [Reward-guided search](https://rfd4-proteina.org/latest/how-to/search.html)
+- [Training and fine-tuning](https://rfd4-proteina.org/latest/contributing/developer-guide.html) · [Worked examples](https://rfd4-proteina.org/latest/examples/index.html)
 
 ## More workflows
 
-- **Binders and motif scaffolding:** condition on an annotated CIF or a YAML design spec; see [Running the model](https://rosettacommons.github.io/RFD4-Proteina/how-to/run-the-model.html).
-- **Reward-guided search:** select a search `inference_experiment` config to branch and prune candidates against an oracle; see [Reward-guided search](https://rosettacommons.github.io/RFD4-Proteina/how-to/search.html).
-- **Partial diffusion:** re-noise and refine an existing design; see [Partial diffusion](https://rosettacommons.github.io/RFD4-Proteina/how-to/partial-diffusion.html).
-- **Scoring and refolding:** run `rfd4-evaluate` on generated structures; see [Scoring and refolding](https://rosettacommons.github.io/RFD4-Proteina/how-to/evaluate-with-metrics.html).
-- **Inference backends:** `native` (default, compiled or eager) or `bioir` via `inference_backend=`; see [Inference backends](https://rosettacommons.github.io/RFD4-Proteina/how-to/advanced/backends.html).
+- **Binders and motif scaffolding:** condition on an annotated CIF or a YAML design spec; see [Running the model](https://rfd4-proteina.org/latest/how-to/run-the-model.html).
+- **Reward-guided search:** select a search `inference_experiment` config to branch and prune candidates against an oracle; see [Reward-guided search](https://rfd4-proteina.org/latest/how-to/search.html).
+- **Partial diffusion:** re-noise and refine an existing design; see [Partial diffusion](https://rfd4-proteina.org/latest/how-to/partial-diffusion.html).
+- **Scoring and refolding:** run `rfd4-evaluate` on generated structures; see [Scoring and refolding](https://rfd4-proteina.org/latest/how-to/evaluate-with-metrics.html).
+- **Inference backends:** `native` (default, compiled or eager) or `bioir` via `inference_backend=`; see [Inference backends](https://rfd4-proteina.org/latest/how-to/advanced/backends.html).
 
 ## Tutorials
 
@@ -173,7 +174,7 @@ Training datasets are separate from model downloads: see the
 - [Antibody campaign examples](https://github.com/RosettaCommons/RFD4-Proteina/blob/main/examples/antibody_design/README.md): cropped PMVK/MZB1 VHH inputs, hotspot sampling, high-early recycling, and partial refinement.
 - [Agent skills](https://github.com/RosettaCommons/RFD4-Proteina/blob/main/skills/README.md): task-specific guides for setup, generation, search, and evaluation.
 
-[Documentation](https://rosettacommons.github.io/RFD4-Proteina/) · [Contributing](https://rosettacommons.github.io/RFD4-Proteina/contributing/index.html) · [BSD 3-Clause license](https://github.com/RosettaCommons/RFD4-Proteina/blob/main/LICENSE)
+[Documentation](https://rfd4-proteina.org/latest/) · [Contributing](https://rfd4-proteina.org/latest/contributing/index.html) · [BSD 3-Clause license](https://github.com/RosettaCommons/RFD4-Proteina/blob/main/LICENSE)
 
 <p align="center">
   <img src="https://huggingface.co/datasets/nvidia/RFD4-Proteina/resolve/main/media/assets/readme/dna-binder-generation.gif" width="360" alt="Protein-binder generation conditioned on a DNA duplex.">
