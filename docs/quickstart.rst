@@ -89,14 +89,14 @@ The wheel is small (about 1 MB): it ships the code, the configs and the monomer 
 benchmark inputs. The antibody torsion reference data is downloaded when that metric is first used. Clone the repository
 (option 1) to use the benchmark inputs.
 
-Create an environment, install the package for your CUDA major version, and generate:
+Create an environment, install the package for your CUDA major version, and generate. ``uv`` is recommended: the
+environment is about 7 GB and ``uv`` installs it in about two minutes, where plain ``pip`` takes about ten.
 
 .. code-block:: bash
 
-   python3.12 -m venv .venv
-   source .venv/bin/activate
-   pip install --extra-index-url https://download.pytorch.org/whl/cu132 \
-       "rfd4-proteina[metrics-cuda13]"      # CUDA 12: metrics-cuda12 and the cu126 index
+   pip install uv                      # or: curl -LsSf https://astral.sh/uv/install.sh | sh
+   uv venv --python 3.12 && source .venv/bin/activate
+   uv pip install "rfd4-proteina[metrics-cuda13,bioir]"   # CUDA 12: metrics-cuda12 instead, without bioir
 
    rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
        inputs=design.yaml out_dir=./runs/pip ~metrics compile_lengths=null

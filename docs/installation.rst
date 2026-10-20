@@ -142,11 +142,11 @@ Deployment options
    * - Apptainer / Singularity
      - ``apptainer build rfd4.sif docker-daemon://rfd4-proteina:cu13``
      - Convert the Docker image; pass ``--nv`` at run time.
-   * - PyPI (once published)
-     - ``pip install rfd4-proteina``
-     - Add the ``metrics-cuda12`` or ``metrics-cuda13`` extra to match the driver, and install Torch from the matching index.
+   * - PyPI
+     - ``uv pip install rfd4-proteina``
+     - Add the ``metrics-cuda12`` or ``metrics-cuda13`` extra to match the driver. ``uv`` is about five times faster than ``pip`` for this environment; ``pip install`` also works.
 
-All CUDA profiles pin cuEquivariance 0.13 and TMol 0.1.64 with the CUDA-major operator package.
+The CUDA profiles accept cuEquivariance 0.13.x and TMol 0.1.x with the CUDA-major operator package; the container images pin the exact versions.
 Linux x86_64 is the qualified platform; the pinned wheels also exist for aarch64 but are not
 qualified. The optional BioIR backend is a separate runtime that these installs do not include yet.
 

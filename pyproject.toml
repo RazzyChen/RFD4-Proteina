@@ -31,14 +31,13 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    # AtomWorks 3 APIs from PyPI; Biotite must match AtomWorks exactly.
-    "atomworks[ml,openbabel]==3.0.4",
-    "biotite==1.6.0",
+    # AtomWorks pins the exact Biotite it supports, so Biotite is only given a floor here.
+    "atomworks[ml,openbabel]>=3.0.4,<4",
+    "biotite>=1.6.0",
     # Configuration & CLI (inherited from the root rc-foundry project)
     "rootutils>=1.0.7,<1.1",
     "hydra-core>=1.3.0,<1.4",
     "environs>=11.0.0,<12",
-    "typer>=0.20.0,<0.26",
     "fire",
     # Model serialization and Hub downloads
     "huggingface-hub>=1.0,<2",
@@ -51,28 +50,21 @@ dependencies = [
     "jaxtyping>=0.2.17,<1",
     "beartype>=0.18.0,<1",
     # ML core
-    "torch==2.14.1",
+    "torch>=2.14.1,<3",
     "lightning>=2.6.0",
     "peft>=0.21.2,<0.22",
     "einops>=0.8.0,<1",
-    "einx>=0.1.0,<1",
     "opt_einsum>=3.4.0,<4",
-    "dm-tree>=0.1.6,<1",
     # Data / numerics
     "pandas>=2,<3",
-    "zstandard",
     "pyyaml>=6.0",  # Packaged RFD4 residue vocabulary
     "toolz",
     "matplotlib",
     "networkx",
     "scikit-learn",
-    # ASE for molecular datasets
-    "ase>=3.22.0",
-    "lmdb",  # Python LMDB bindings for ASE's LMDB backend
-    "boto3>=1.34,<2",
     # Validation metrics
     "posebusters",
-    "tmol==0.1.64",
+    "tmol>=0.1.64,<0.2",
     "anarcii>=2.0.8,<3",
     "assertpy",
 ]
@@ -91,29 +83,29 @@ docs = [
 ]
 # Select the metrics dependencies matching the CUDA stack.
 metrics-cuda12 = [
-    "tmol[cu12]==0.1.64; sys_platform == 'linux'",
-    "cuequivariance==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-torch==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-ops-cu12==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-ops-torch-cu12==0.13.0; sys_platform == 'linux'",
+    "tmol[cu12]>=0.1.64,<0.2; sys_platform == 'linux'",
+    "cuequivariance>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-torch>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-ops-cu12>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-ops-torch-cu12>=0.13.0,<0.14; sys_platform == 'linux'",
 ]
 metrics-cuda13 = [
-    "tmol[cu13]==0.1.64; sys_platform == 'linux'",
+    "tmol[cu13]>=0.1.64,<0.2; sys_platform == 'linux'",
     # PyTorch's CuTe RMSNorm kernels require both CUTLASS DSL and TVM FFI.
-    "apache-tvm-ffi==0.1.14.post0; sys_platform == 'linux'",
-    "cuda-core==1.0.1; sys_platform == 'linux'",
-    "cuda-python==13.3.1; sys_platform == 'linux'",
-    "nvidia-cutlass-dsl==4.5.2; sys_platform == 'linux'",
-    "nvidia-cutlass-dsl-libs-base==4.5.2; sys_platform == 'linux'",
-    "cuequivariance==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-torch==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-ops-cu13==0.13.0; sys_platform == 'linux'",
-    "cuequivariance-ops-torch-cu13==0.13.0; sys_platform == 'linux'",
+    "apache-tvm-ffi>=0.1.14,<0.2; sys_platform == 'linux'",
+    "cuda-core>=1.0.1,<2; sys_platform == 'linux'",
+    "cuda-python>=13.3.1,<14; sys_platform == 'linux'",
+    "nvidia-cutlass-dsl>=4.5.2,<4.6; sys_platform == 'linux'",
+    "nvidia-cutlass-dsl-libs-base>=4.5.2,<4.6; sys_platform == 'linux'",
+    "cuequivariance>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-torch>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-ops-cu13>=0.13.0,<0.14; sys_platform == 'linux'",
+    "cuequivariance-ops-torch-cu13>=0.13.0,<0.14; sys_platform == 'linux'",
 ]
 # BioIR, the accelerated runtime behind inference_backend=bioir. It is built against CUDA 13, so install it with
 # metrics-cuda13: pip install "rfd4-proteina[metrics-cuda13,bioir]"
 bioir = [
-    "bionemo-ir==0.2.0; sys_platform == 'linux'",
+    "bionemo-ir>=0.2.0,<0.3; sys_platform == 'linux'",
 ]
 dev = [
     # Linters & formatters

@@ -97,12 +97,16 @@ Public repositories need no authentication.
 On Linux x86_64 with Python 3.12, an NVIDIA GPU and a CUDA 13-compatible driver:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install "rfd4-proteina[metrics-cuda13,bioir]"
+pip install uv                      # or: curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv --python 3.12 && source .venv/bin/activate
+uv pip install "rfd4-proteina[metrics-cuda13,bioir]"
 
 EXAMPLE=$(python -c "import rfproteina, pathlib; print(pathlib.Path(rfproteina.__file__).parent / 'data/benchmarks/monomer/monomer-short.cif')")
 rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina inputs=$EXAMPLE num_replicates=1 out_dir=./runs/first ~metrics
 ```
+
+The environment is about 7 GB, mostly PyTorch and the CUDA libraries. `uv` downloads in parallel and caches wheels, so it installs in
+about two minutes on a fresh cluster node where plain `pip` takes about ten; `pip install` works too, only more slowly.
 
 The model can also be run as a Hugging Face Diffusers pipeline. The [quickstart](https://rfd4-proteina.org/latest/quickstart.html) covers all three routes in order: GitHub clone, PyPI and Diffusers.
 
@@ -133,7 +137,7 @@ rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
     inputs=design.yaml out_dir=./runs/hf ~metrics compile_lengths=null
 ```
 
-Install it with `pip install rfd4-proteina` on a
+Install it with `uv pip install rfd4-proteina` on a
 supported CUDA/Python system. The same API works from an installed development checkout:
 
 ```python
