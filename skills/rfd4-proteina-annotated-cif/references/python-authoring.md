@@ -28,6 +28,10 @@ condition classes; otherwise RFProteina-specific columns can be lost.
 
 ## Load and edit a benchmark target
 
+The example below authors absolute-coordinate backbone conditioning. For new PPI
+designs, prefer the [internal-backbone PPI spec](../../../docs/how-to/input_prep/examples/condition_spec_ppi.yaml),
+which also retains target sequence and hotspots; do not reinterpret existing benchmark inputs.
+
 ```python
 from pathlib import Path
 

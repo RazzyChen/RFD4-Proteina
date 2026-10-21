@@ -32,7 +32,7 @@ need it.
 ## Are specs checked before the run?
 
 Not by default. Each design gets built when the run reaches it. Pass `prevalidate_inputs=true` to
-`generate.py` to build every design up front and run the same safeguards the CIF writer runs. That
+`rfd4-generate` to build every design up front and run the same safeguards the CIF writer runs. That
 catches typos across a whole batch, at the cost of building every design before the run starts. The
 CIF writer script does this by default, and `--no-prevalidate` turns it off. Expandable segments are
 realized on a temporary copy for the pre-save pipeline check; the saved CIF retains their
@@ -43,6 +43,7 @@ than getting ignored, whether or not you prevalidate. That covers a typo'd `cond
 
 ## Do I need to write CIFs to disk?
 
-No. `generate.py` builds each design in memory. To materialize CIFs for inspection, run
-`scripts/write_condition_spec_cifs.py <spec> --out-dir <dir>`. For anything complicated, do this. It
+No. `rfd4-generate` builds each design in memory. To materialize CIFs for inspection, run
+`scripts/write_condition_spec_cifs.py <spec> --out-dir <dir>` from a clone (the wheel does not
+ship `scripts/`). For anything complicated, do this. It
 is the cheapest way to catch a mistake before you spend GPU time on it.

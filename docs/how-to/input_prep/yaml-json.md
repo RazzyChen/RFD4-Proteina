@@ -175,7 +175,7 @@ Point `inputs=` at the spec file exactly the way you would at a CIF:
 rfd4-generate inputs=my_designs.yaml num_replicates=10 batch_size=8
 ```
 
-Each top-level design key runs as one design problem; `generate.py` builds the annotated CIF in
+Each top-level design key runs as one design problem; `rfd4-generate` builds the annotated CIF in
 memory and consumes it directly. You do not need to write anything to disk first.
 
 To inspect what a design actually produces before spending GPU time on it, materialize it to
@@ -211,11 +211,19 @@ and one for a more complicated [binding pocket redesign](examples/condition_spec
 tutorila notebook](../../examples/ppi_specificity_tutorial.ipynb) also uses the YAML specification format.
 
 - [condition_spec_ppi.yaml](examples/condition_spec_ppi.yaml) builds a de novo PPI binder against
-  PD-L1, using an expandable binder chain, backbone-only coordinate conditioning on the target, and
+  PD-L1, using an expandable binder chain, backbone-only internal-coordinate conditioning and sequence conditioning on the target, and
   atom-level hotspots.
 - [condition_spec_complicated.yaml](examples/condition_spec_complicated.yaml) redesigns a small
   molecule pocket, exercising a multi-chain contig, an expandable segment carrying secondary
   structure conditioning, index groups, and both selection styles.
+
+For PPI, prefer backbone-only internal-coordinate conditioning (`C_CRDGRP`) with
+target sequence conditioning (`C_SEQ`). This reduces target-like binder outputs
+while leaving target sidechains free. Use one positive group ID for target atoms
+whose relative geometry should be retained, including across chains of a rigid
+target complex. Do not set `C_CRD` on those atoms; when editing an annotated input,
+clear their absolute conditioning first. The benchmark CIFs retain their explicitly
+defined absolute-coordinate conditions and are not converted automatically.
 
 **Fix a binder backbone, redesign its sequence, hotspot the target.**
 

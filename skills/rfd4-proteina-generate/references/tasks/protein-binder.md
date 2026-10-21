@@ -5,21 +5,25 @@ Design a binder to a target protein at specified hotspot residues. Back to the
 
 ## What the task is
 
-Condition on a target protein's structure (coordinate-conditioned) and a set of
-**hotspot** residues (the `C_HOT` annotation in a CIF), then design a new binder
-chain against that interface.
+Default to target backbone-only internal-coordinate conditioning (`C_CRDGRP`),
+full target sequence (`C_SEQ`), and requested hotspots (`C_HOT`). This reduces
+target-like outputs while leaving sidechains and global target pose free.
+Use one group for a rigid multichain target; separate groups allow relative motion.
+Preserve explicit user choices rather than converting existing inputs silently.
 
-## Example inputs (`data/benchmarks/`)
+## Example inputs
 
 | File | Notes |
 | --- | --- |
-| `ppi/ppi_all_atom/` | One annotated CIF per target, including `insulinr`, `pdl1`, `01_PD1`, and `30_SC2RBD` |
+| `docs/how-to/input_prep/examples/condition_spec_ppi.yaml` | Recommended PD-L1 internal-backbone example; sequence and hotspots retained |
+| `data/benchmarks/ppi/ppi_bb_only/`, `ppi_all_atom/` | Absolute-coordinate benchmark variants; not the internal-coordinate default |
 
 ## Run
 
 ```bash
 rfd4-generate \
-    inputs=data/benchmarks/ppi/ppi_all_atom/pdl1.cif.zst \
+    inputs=docs/how-to/input_prep/examples/condition_spec_ppi.yaml \
+    recycle_strategy=medium/front_loaded \
     num_replicates=8 batch_size=8 out_dir=./runs/ppi \
     metrics_tags='[ppi_refolding,hotspot_conditioning]'
 ```
@@ -28,7 +32,7 @@ rfd4-generate \
 
 - **`ppi_refolding`** — AF3 refolding + target templating + interface metrics.
 - **`hotspot_conditioning`** — hotspot obedience (requires hotspot input).
-- Both need the AF3 container (see **rfd4-proteina-evaluate**).
+- Only refolding requires the configured oracle environment (see **rfd4-proteina-evaluate**).
 - `save_chain_of_interest=true` if you plan to cluster designed binders by
   structure (foldseek).
 

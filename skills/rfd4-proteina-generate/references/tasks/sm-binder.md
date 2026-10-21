@@ -18,6 +18,7 @@ ligand; the model designs a protein pocket around it. Back to the
 rfd4-generate \
     inputs=data/benchmarks/small_molecule_binder/sm_binder \
     subset_to_examples=SAM \
+    recycle_strategy=medium/midpeak \
     num_replicates=8 batch_size=8 out_dir=./runs/sm_binder \
     metrics_tags='[sm_binder_refolding,interchain_interactions]'
 ```

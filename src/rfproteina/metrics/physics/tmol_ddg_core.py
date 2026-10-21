@@ -16,7 +16,6 @@ from atomworks.io.utils.standard_annotations import STANDARD_ANNOTATIONS
 from biotite.structure import AtomArray, get_residue_starts
 from scipy.spatial import cKDTree
 from tmol.database import ParameterDatabase
-from tmol.io import PoseBuildContext, pose_stack_from_atom_array
 from tmol.kinematics import CartesianMoveMap, FoldForest, MoveMap
 from tmol.optimization import run_kin_min
 from tmol.pack import PackerPalette, PackerTask, pack_rotamers
@@ -25,6 +24,13 @@ from tmol.pack.rotamer.dunbrack import create_dunbrack_sampler_from_database
 from tmol.pose import PoseStack
 from tmol.relax import fast_relax
 from tmol.score import ScoreFunction, beta2016_score_function
+
+try:
+    from tmol.io import PoseBuildContext, build_context_from_atom_array, pose_stack_from_atom_array
+except ImportError:  # TMol 0.1.x exports the same helpers as *_from_biotite
+    from tmol.io import PoseBuildContext
+    from tmol.io import build_context_from_biotite as build_context_from_atom_array  # noqa: F401
+    from tmol.io import pose_stack_from_biotite as pose_stack_from_atom_array
 
 from rfproteina.utils.chain import get_chain_of_interest
 from rfproteina.utils.ddp import RankedLogger

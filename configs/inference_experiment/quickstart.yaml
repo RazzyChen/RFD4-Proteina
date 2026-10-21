@@ -13,7 +13,7 @@
 #
 # The checkpoint comes from inference.yaml (`hf_ckpt_path` and `hf_ckpt_revision`, the single source of
 # truth for the pinned model revision), so no checkpoint argument is needed. Pass `hf_ckpt_path=null` for
-# native checkpoints under DATA_PATH. Check the machine first with `rfd4-doctor`.
+# native checkpoints under DATA_PATH.
 
 defaults:
   - /generation: inference_base

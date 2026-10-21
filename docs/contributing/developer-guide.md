@@ -360,7 +360,7 @@ Generation and new fine-tuning runs accept `hf_ckpt_path` and
 `hf_ckpt_revision` for a Hub repository or local exported bundle. Native inference
 uses `ckpt_path`/`ckpt_name`; native training initialization uses
 `pretrain_ckpt_path`, and training resume uses `resume_ckpt_path`. Sampling
-in Python can reuse a loaded model with `run_generation(cfg, model=model)`.
+in Python can reuse a loaded model with `rfd4.generate(model, overrides=[...])` (or `run_generation(cfg, model=model)` with a composed config).
 Full training resume uses a native Lightning checkpoint, including optimizer and
 EMA state, and does not need the original bundle. Bundle configurations retain
 model/AE architecture and scientific featurization settings, excluding dataset

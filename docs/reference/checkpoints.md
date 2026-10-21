@@ -33,7 +33,7 @@ autoencoder it was trained against. Two more are optional, depending on the work
 | PEFT adapter (optional) | `adapter_path` | user-supplied directory | Inference only; a local fine-tuning adapter, loaded onto the exact base denoiser/autoencoder pair it was fine-tuned against |
 | OpenFold3 refolding oracle (optional) | `AF3_IMAGE`, `AF3_MODEL_DIR`, `AF3_JAX_CACHE_DIR` | `$DATA_PATH/openfold3/` | Refolding/designability metrics only (`metrics/refolding_oracles=of3`); not a generation checkpoint |
 
-`configs/inference.yaml` is the **runtime source of truth** for "the SOTA model": `generate.py`
+`configs/inference.yaml` is the **runtime source of truth** for "the SOTA model": `rfd4-generate`
 loads the Hub repository `hf_ckpt_path` at the pinned commit `hf_ckpt_revision` from it by default
 (the bundle holds the denoiser and the autoencoder), and the GPU regression tests read it too. The
 native `ckpt_name` and `autoencoder_ckpt_path` keys name the same release as local files and apply

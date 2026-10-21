@@ -14,10 +14,10 @@ from typing import Any, Literal
 import torch
 from atomworks.io.utils.ccd import check_ccd_codes_are_available
 from biotite.structure import AtomArray
-from tmol.io import build_context_from_atom_array
 
 from rfproteina.metrics.metric import Metric
 from rfproteina.metrics.physics.tmol_ddg_core import (
+    build_context_from_atom_array,
     build_pose_and_masks,
     create_score_function,
     pack_shell,

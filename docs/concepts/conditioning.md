@@ -59,6 +59,11 @@ sequence conditioning that implies is no extra cost, since you wanted that ident
 
 ## Absolute vs. internal coordinates
 
+For protein-binder design, we recommend backbone-only internal-coordinate
+conditioning of the target, together with its full sequence and chosen hotspots.
+This reduces target-like binder outputs while leaving target sidechains free.
+See the [runnable PPI example](../how-to/input_prep/examples/condition_spec_ppi.yaml).
+
 `C_CRD` gives an atom's ground-truth coordinate in the global frame: where it actually sits in the
 design. That works for a single rigid motif, but it can't express "these atoms are rigid relative to
 each other, but I don't know or care where that rigid body sits in space" — which is exactly what an

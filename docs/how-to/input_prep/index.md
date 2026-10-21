@@ -46,7 +46,7 @@ conditions, including the two core methods — `set_annotation_from_ground_truth
 To script or template design problems without writing Python, describe them in a
 small YAML or JSON file. You subset the input, insert expandable segments, and set conditions on
 atom selections. From there you either write annotated CIFs or hand the spec straight to
-`generate.py`. Either way you end up with the same annotated CIF representation described above.
+`rfd4-generate`. Either way you end up with the same annotated CIF representation described above.
 This is shorthand for authoring one, not a different format.
 
 See the [YAML/JSON condition spec how-to guide](yaml-json.md) for a guided tour of the file shape, `contig`, and
@@ -70,6 +70,10 @@ All routes end in the same annotated CIF, which is what the model reads:
 ```
 
 ## Running the model
+
+For PPI, start with the [PD-L1 example](examples/condition_spec_ppi.yaml): target
+backbone internal coordinates, full target sequence, and interface hotspots.
+This is the recommended default; absolute and all-atom conditioning remain available.
 
 ```bash
 rfd4-generate \

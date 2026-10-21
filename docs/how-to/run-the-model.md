@@ -71,14 +71,20 @@ overrides, and a config file anywhere on the filesystem.
 
 ## Recycling schedules
 
-Select `recycle_strategy=<low|medium|high>/<flat|midpeak|front_loaded>`; all use 60 steps and 120/180/300 total trunk passes respectively (including first passes).
-`thinking_low/medium/high` alias front-loaded presets; training validation uses each task's medium.
+Select a task-specific `recycle_strategy` below. All presets use 60 sampling steps;
+parentheses give total trunk passes, including the first pass at each step.
 
-| Task | Suggested shape |
-| --- | --- |
-| PPI, fixed/unfixed DNA | `front_loaded` |
-| MCSA, small-molecule binders (including DISCO) | `midpeak` |
-| Inverse folding | `flat` |
+| Task | Low | Medium | High |
+| --- | --- | --- | --- |
+| PPI | `low/front_loaded` (120) | `medium/front_loaded` (180) | `high/front_loaded` (300) |
+| Fixed/unfixed DNA | `low/front_loaded` (120) | `medium/front_loaded` (180) | `high/flat` (300) |
+| MCSA, small-molecule binders (including DISCO) | `low/midpeak` (120) | `medium/midpeak` (150) | `high/midpeak` (180) |
+| Inverse folding | `low/flat` (120) | `medium/flat` (180) | `high/flat` (300) |
+
+For example, use `recycle_strategy=medium/midpeak` for small-molecule design.
+`thinking_low/medium/high` remain aliases for front-loaded presets, not task-aware
+selectors. The CLI defaults to `thinking_medium`; training validation uses each
+task's medium preset. These task recommendations were selected using benchmark results.
 
 ## Verbose output
 

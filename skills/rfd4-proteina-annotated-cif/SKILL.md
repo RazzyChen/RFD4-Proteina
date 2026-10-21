@@ -28,6 +28,8 @@ by itself authorize a generation run or establish a campaign ledger policy.
 
 1. Inspect the source, existing conditions, requested assembly, and design intent.
    Ask only about ambiguities that change the design problem.
+   For PPI, recommend backbone-only internal coordinates plus full target sequence
+   and requested hotspots; preserve explicit alternatives and existing benchmark inputs.
 2. Read [python-authoring.md](references/python-authoring.md) for registry import,
    parser selection, condition edits, expandable segments, and combining arrays.
 3. Read [annotators-and-selections.md](references/annotators-and-selections.md)

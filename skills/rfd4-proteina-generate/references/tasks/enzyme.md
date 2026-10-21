@@ -20,6 +20,7 @@ motif-scaffolding problem where the motif is a set of catalytic residues
 rfd4-generate \
     inputs=data/benchmarks/mcsa/mcsa_37 \
     subset_to_examples=M0630_1j79 \
+    recycle_strategy=medium/midpeak \
     num_replicates=8 batch_size=8 out_dir=./runs/enzyme \
     metrics_tags='[ame_refolding,motif_scaffold_refolding]'
 ```

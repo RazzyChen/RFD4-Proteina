@@ -53,7 +53,7 @@ input, task-specific overrides, and gotchas:
 | Motif scaffolding | `motif_scaffolding/motif_indexed`, `motif_scaffolding/motif_unindexed`, `motif_scaffolding/motif_indexed_internal_coords` | [tasks/motif.md](references/tasks/motif.md) |
 | Enzyme design (active site) | `mcsa/mcsa_37`, `mcsa/mcsa_37_fixed_ligand`, `mcsa/mcsa_37_no_ligand` | [tasks/enzyme.md](references/tasks/enzyme.md) |
 | Small-molecule binder | `small_molecule_binder/sm_binder`, `small_molecule_binder/SAM_hbonds.cif.zst` | [tasks/sm-binder.md](references/tasks/sm-binder.md) |
-| Protein binder | `ppi/ppi_all_atom/` | [tasks/protein-binder.md](references/tasks/protein-binder.md) |
+| Protein binder | `docs/how-to/input_prep/examples/condition_spec_ppi.yaml` (internal backbone) | [tasks/protein-binder.md](references/tasks/protein-binder.md) |
 | DNA binder | `dna_binder/dna_binder_denovo_val` | [tasks/dna-binder.md](references/tasks/dna-binder.md) |
 
 **Need an input the request doesn't have?** Annotated CIF is the recommended,
@@ -123,10 +123,9 @@ that matter most:
   Angstroms.
 - **Deterministic (ODE) sampling** (no mid-trajectory noise):
   `generation.model.bb_ca.gt.mode=ode generation.model.local_latents.gt.mode=ode`.
-- **Steps / recycling.** The default 1x schedule uses 60 model evaluations
-  and 185 trunk passes, with twice the integration-step density in the final 20%
-  of each modality's clock. Select `recycle_strategy=thinking_high` for the
-  1.5x recycle-depth variant.
+- **Steps / recycling.** Use the [task schedule table](../../docs/how-to/run-the-model.md#recycling-schedules).
+  All presets use 60 steps; select the task's medium unless another budget was
+  requested. `thinking_*` aliases are front-loaded, not task-aware selectors.
 
 ## Step 5 — Inline metrics (optional)
 
@@ -180,7 +179,7 @@ table and how to read annotations: [references/outputs.md](references/outputs.md
 | `--inputs`/`--out_dir` not recognized / Hydra config error | Use `=` not `--`: `inputs=file.cif`, never `--inputs file.cif` |
 | checkpoint not found | Confirm `DATA_PATH`, then compare `ckpt_name` and `ckpt_path` with `configs/inference.yaml`; override only when intentionally using another checkpoint |
 | `DATA_PATH` / checkpoint not found | `export DATA_PATH=...` then `./scripts/download_assets.sh "$DATA_PATH"` |
-| `atomworks not found` | Re-run `make setup` to install the public AtomWorks dependency |
+| `atomworks not found` | `git submodule update --init lib/atomworks`, re-run `setup.sh` |
 | `hydra not found` / import errors | `source .venv/bin/activate` |
 | `No .env file found for cluster '<name>'` | `export CLUSTER=local` and create `.env.local` |
 | AF3 / `*_refolding` errors | Refolding metrics need an AF3 container — see rfd4-proteina-setup + rfd4-proteina-evaluate |

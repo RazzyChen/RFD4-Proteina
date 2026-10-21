@@ -20,11 +20,15 @@ donor conditioning to base edges) and design a protein that binds a target site.
 rfd4-generate \
     inputs=data/benchmarks/dna_binder/dna_binder_denovo_val \
     subset_to_examples=7n5u_structure_context \
+    recycle_strategy=medium/front_loaded \
     num_replicates=8 batch_size=8 out_dir=./runs/dna_binder \
     metrics_tags='[dna_refolding,interchain_interactions]'
 ```
 
 ## Task-specific overrides & metrics
+
+- Use `low/front_loaded`, `medium/front_loaded`, or `high/flat` for Low,
+  Medium, or High thinking, respectively (`recycle_strategy=...`).
 
 - **`interchain_interactions`** — protein-DNA H-bond / interaction adherence and
   counts (no AF3 container required; see **rfd4-proteina-evaluate**).

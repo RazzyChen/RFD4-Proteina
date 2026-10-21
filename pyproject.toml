@@ -1,6 +1,6 @@
 [project]
 name = "rfd4-proteina"
-version = "0.0.2"
+version = "0.0.3"
 description = "Flow-matching foundation model for all-atom biomolecular design: proteins, nucleic acids, ligands and complexes"
 readme = "README.md"
 license-files = ["LICENSE"]

@@ -114,9 +114,19 @@ pip install uv                      # or: curl -LsSf https://astral.sh/uv/instal
 uv venv --python 3.12 && source .venv/bin/activate
 uv pip install "rfd4-proteina[all-cuda13]"   # CUDA 12: all-cuda12; the base package alone is "rfd4-proteina"
 
-EXAMPLE=$(python -c "import rfproteina, pathlib; print(pathlib.Path(rfproteina.__file__).parent / 'data/benchmarks/monomer/monomer-short.cif.zst')")
-rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina inputs=$EXAMPLE num_replicates=1 out_dir=./runs/first ~metrics
+# a binder to PD-L1: download the target, describe the design in YAML, generate
+curl -LO https://raw.githubusercontent.com/RosettaCommons/RFD4-Proteina/main/docs/examples/inputs/5o45_cropped.cif.zst
+cat > binder.yaml <<'EOF'
+binder:
+  input: 5o45_cropped.cif.zst
+  contig: "50-120, /0, A17-131"
+  conditions: {C_CRDGRP: {1: [{select: "sel('A/*/*/[N,CA,C,O]')"}]},
+               C_SEQ: {true: [{select: "sel('A')"}]}}
+EOF
+rfd4-generate inference_experiment=quickstart inputs=binder.yaml out_dir=./runs/first
 ```
+
+The `quickstart` preset skips scoring and the `torch.compile` warm-up so a first run finishes quickly; drop it for larger runs.
 
 The environment is about 7 GB, mostly PyTorch and the CUDA libraries. `uv` downloads in parallel and caches wheels, so it installs in
 about two minutes on a fresh cluster node where plain `pip` takes about ten; `pip install` works too, only more slowly.
@@ -161,31 +171,22 @@ To load the model from the Hugging Face Hub, with no local checkpoints and no `D
 
 ```bash
 rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
-    inputs=design.yaml out_dir=./runs/hf ~metrics compile_lengths=null
+    inference_experiment=quickstart inputs=design.yaml out_dir=./runs/hf
 ```
 
 Install it with `uv pip install rfd4-proteina` on a
 supported CUDA/Python system. The same API works from an installed development checkout:
 
 ```python
-from hydra import compose, initialize_config_dir
-import rootutils
-import rfproteina
-from rfd4_proteina import Proteina
-from rfproteina.generate import run_generation
+import rfd4_proteina as rfd4
 
-model = Proteina.from_pretrained("nvidia/RFD4-Proteina")
-config_dir = rootutils.find_root(rfproteina.__file__, indicator=".project-root") / "configs"
-with initialize_config_dir(config_dir=str(config_dir), version_base="1.3"):
-    cfg = compose(config_name="inference", overrides=[
-        "inputs=design.yaml", "out_dir=runs/hf", "~metrics", "compile_lengths=null",
-    ])
-run_generation(cfg, model=model)
+model = rfd4.Proteina.from_pretrained("nvidia/RFD4-Proteina")
+rfd4.generate(model, overrides=["inference_experiment=quickstart", "inputs=design.yaml", "out_dir=runs/hf"])
 ```
 
 Use an annotated CIF or condition-spec YAML as `inputs`. Add `revision="<commit>"`
 to `from_pretrained` (or `hf_ckpt_revision=<commit>` to the CLI) for reproducibility.
-HF caches downloaded weights; `run_generation` reuses the loaded model.
+HF caches downloaded weights; `rfd4.generate` reuses the loaded model.
 For a native local checkpoint, set `hf_ckpt_path=null`,
 `ckpt_path=/path/to/checkpoints`, `ckpt_name=model.ckpt`, and
 `autoencoder_ckpt_path=/path/to/ae.ckpt`.

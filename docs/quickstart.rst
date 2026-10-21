@@ -125,18 +125,28 @@ Generate a design:
 
 .. code-block:: bash
 
-   rfd4-generate hf_ckpt_path=nvidia/RFD4-Proteina \
-       inputs=design.yaml out_dir=./runs/pip ~metrics compile_lengths=null
+   curl -LO https://raw.githubusercontent.com/RosettaCommons/RFD4-Proteina/main/docs/examples/inputs/5o45_cropped.cif.zst
+   cat > binder.yaml <<'EOF'
+   binder:
+     input: 5o45_cropped.cif.zst
+     contig: "50-120, /0, A17-131"
+     conditions: {C_CRDGRP: {1: [{select: "sel('A/*/*/[N,CA,C,O]')"}]},
+                  C_SEQ: {true: [{select: "sel('A')"}]}}
+   EOF
+   rfd4-generate inference_experiment=quickstart inputs=binder.yaml out_dir=./runs/pip
 
-``inputs`` takes an annotated CIF or a condition-spec YAML; see :doc:`how-to/input_prep/yaml-json`.
+This designs a 50-120 residue binder to PD-L1. The ``quickstart`` preset skips scoring and the ``torch.compile``
+warm-up so a first run finishes quickly; drop it for larger runs. ``inputs`` takes an annotated CIF or a
+condition-spec YAML; see :doc:`how-to/input_prep/yaml-json`.
 The released weights are fetched from the Hugging Face Hub and cached. The model is also
 available from Python:
 
 .. code-block:: python
 
-   from rfd4_proteina import Proteina
+   import rfd4_proteina as rfd4
 
-   model = Proteina.from_pretrained("nvidia/RFD4-Proteina")
+   model = rfd4.Proteina.from_pretrained("nvidia/RFD4-Proteina")
+   rfd4.generate(model, overrides=["inference_experiment=quickstart", "inputs=binder.yaml", "out_dir=runs/py"])
 
 Search and the refolding metrics also need an AlphaFold 2 or AlphaFold 3 / OpenFold3 runtime,
 which a clone sets up for you (option 1).

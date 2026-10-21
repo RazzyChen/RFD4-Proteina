@@ -58,11 +58,15 @@ and verify required oracle metrics before scaling.
   charges, and intended conditioning; do not silently repair incomplete residues or atomize inputs.
   Check designed/fixed regions and chain of interest. Fixing sidechains also fixes identity;
   use backbone-only conditioning when redesigning sequence.
+- For PPI, default to target backbone-only internal coordinates (`C_CRDGRP`), full
+  target sequence (`C_SEQ`), and requested hotspots. Preserve explicit user conditions.
 - For search, explicitly select metric providers needed by rewards and pass criteria.
 - Keep requested sampling, recycle, conditioning, and metric settings explicit.
   Do not substitute another preset just to make a run succeed.
 - Select `recycle_strategy` from the [task schedule table](docs/how-to/run-the-model.md#recycling-schedules).
-  Use that task's medium preset unless another budget was requested: front-loaded for PPI/DNA, midpeak for MCSA/small molecules, flat for inverse folding. `thinking_*` alias front-loaded presets, not task-aware defaults.
+  Use that task's medium preset unless another budget was requested. PPI uses front-loaded
+  120/180/300 passes; MCSA/small molecules use midpeak 120/150/180; DNA uses front-loaded
+  Low/Medium and flat5 High. `thinking_*` aliases are front-loaded, not task-aware defaults.
 
 ## Scheduler submissions
 
