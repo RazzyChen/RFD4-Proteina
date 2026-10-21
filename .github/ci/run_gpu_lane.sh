@@ -34,10 +34,15 @@ PROFILE="${RFD4_CI_PROFILE:?RFD4_CI_PROFILE must point to the runner-local clust
 set -a
 source "$PROFILE"
 set +a
+# The Python settings loader reads the root .env.<cluster> (gitignored); expose the runner-local profile
+# there for this run only.
+cp "$PROFILE" ".env.${CI_CLUSTER}"
+chmod 600 ".env.${CI_CLUSTER}"
+ENV_PROFILE_COPY=".env.${CI_CLUSTER}"
 
 SIF="${LATENT_APPTAINER_SIF:?LATENT_APPTAINER_SIF must be set in $RFD4_CI_PROFILE}"
-: "${APPTAINERENV_AWS_ACCESS_KEY_ID:?GitHub Actions secret AWS_ACCESS_KEY_ID is unavailable}"
-: "${APPTAINERENV_AWS_SECRET_ACCESS_KEY:?GitHub Actions secret AWS_SECRET_ACCESS_KEY is unavailable}"
+: "${APPTAINERENV_AWS_ACCESS_KEY_ID:?export APPTAINERENV_AWS_ACCESS_KEY_ID in the runner-local profile}"
+: "${APPTAINERENV_AWS_SECRET_ACCESS_KEY:?export APPTAINERENV_AWS_SECRET_ACCESS_KEY in the runner-local profile}"
 export APPTAINERENV_AWS_ENDPOINT_URL="${AWS_ENDPOINT_URL:?AWS_ENDPOINT_URL must be set in $RFD4_CI_PROFILE}"
 
 # Cluster data roots apptainer does not auto-bind, then the squashfs training datasets.
@@ -70,6 +75,7 @@ OF3_LAUNCHER_SOCKET_TEMPLATE_EXPORT=""
 REQUIRE_AF2=0
 
 cleanup_daemons() {
+  rm -f "${ENV_PROFILE_COPY:-}"
   for pid in "${AF3_DAEMONS_PID:-}" "${AF2_DAEMONS_PID:-}" "${OF3_DAEMONS_PID:-}"; do
     if [[ -n "$pid" ]]; then
       kill -TERM "$pid" 2>/dev/null || true

@@ -1,12 +1,23 @@
 name: Cluster CI
 
 # Maintainers only. Runs the CPU and GPU test lanes on the self-hosted CoreWeave and DIGS runners.
-# Triggers are `workflow_dispatch` and pushes to `main`; pull requests never run here, so
-# contributed code cannot reach a cluster. Every cluster job also waits for the `authorize` job
-# and for the `cluster-ci` environment, so a listed maintainer is required twice over.
-# Runner setup: .github/ci/RUNNERS.md.
+# Triggers:
+#   - a `/ci` (or `/ci coreweave`, `/ci digs`) comment from a listed maintainer on an open pull request into
+#     `main`: tests the PR head as of the comment;
+#   - a push to `main` (a merged pull request): tests the merged commit and uploads the coverage to Codecov, which
+#     keeps the main baseline current. The code on `main` has already been reviewed and merged, so no maintainer
+#     check applies;
+#   - `workflow_dispatch`, optionally with a PR number and the head SHA the maintainer reviewed.
+# pull_request events never run here. issue_comment and workflow_dispatch workflows are always read from `main`,
+# so a pull request cannot change these rules; only the code under test comes from the PR. Every cluster job waits
+# for the `authorize` job, which accepts only logins in CLUSTER_CI_MAINTAINERS and only runs from `main`. Cluster
+# credentials live in the runner-local profile, not in GitHub secrets. Runner setup: .github/ci/RUNNERS.md.
 
 on:
+  push:
+    branches: [main]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       clusters:
@@ -14,12 +25,19 @@ on:
         type: choice
         options: [both, coreweave, digs]
         default: both
-  push:
-    branches: [main]
+      pr:
+        description: "Pull request number (into main) to test instead of main. Leave empty to test main."
+        type: string
+        default: ""
+      reviewed_sha:
+        description: "Required with pr: the full head commit SHA you reviewed. The run refuses if the PR head has moved."
+        type: string
+        default: ""
 
 concurrency:
-  group: cluster-ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: cluster-ci-${{ github.event_name == 'issue_comment' && format('pr-{0}', github.event.issue.number) || github.ref }}
+  # A newer push to main queues behind the running one instead of cancelling it, so every merge reports coverage.
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 permissions:
   contents: read
@@ -27,38 +45,119 @@ permissions:
 jobs:
   authorize:
     name: authorize (maintainers only)
-    if: github.repository == 'RosettaCommons/RFD4-Proteina'
+    # Comments are pre-filtered so unrelated comments start no job at all: it must be a PR comment that starts
+    # with /ci from someone with a repository relationship.
+    if: >-
+      github.repository == 'RosettaCommons/RFD4-Proteina'
+      && (github.event_name != 'issue_comment'
+          || (github.event.issue.pull_request
+              && startsWith(github.event.comment.body, '/ci')
+              && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)))
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      allowed: ${{ steps.check.outputs.allowed }}
+      sha: ${{ steps.target.outputs.sha }}
+      clusters: ${{ steps.check.outputs.clusters }}
+      pr: ${{ steps.target.outputs.pr }}
     steps:
       - name: Only listed maintainers may use the cluster runners
+        id: check
         env:
+          EVENT: ${{ github.event_name }}
           ACTOR: ${{ github.triggering_actor }}
           # Comma-separated GitHub logins in the repository variable CLUSTER_CI_MAINTAINERS.
           ALLOWED: ${{ vars.CLUSTER_CI_MAINTAINERS }}
+          INPUT_CLUSTERS: ${{ inputs.clusters }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          if [ -z "${ALLOWED//[ ,]/}" ]; then
-            echo "::error::Repository variable CLUSTER_CI_MAINTAINERS is empty, so nobody is authorized."
-            exit 1
+          deny() {
+            # Comments from people who are not maintainers are ignored quietly; every other trigger fails loudly.
+            echo "::notice::$1"
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            [ "$EVENT" = issue_comment ] && exit 0
+            echo "::error::$1"; exit 1
+          }
+          [ "$GITHUB_REF" = "refs/heads/main" ] || deny "Cluster CI only runs from main (got $GITHUB_REF)."
+          if [ "$EVENT" = push ]; then
+            echo "Push to main: testing the merged commit on both clusters."
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+            echo "clusters=both" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          [ -n "${ALLOWED//[ ,]/}" ] || deny "Repository variable CLUSTER_CI_MAINTAINERS is empty, so nobody is authorized."
           allowed=",$(printf '%s' "$ALLOWED" | tr -d ' ' | tr '[:upper:]' '[:lower:]'),"
           actor="$(printf '%s' "$ACTOR" | tr '[:upper:]' '[:lower:]')"
           case "$allowed" in
-            *",$actor,"*) echo "$ACTOR is an authorized maintainer." ;;
-            *) echo "::error::$ACTOR is not listed in CLUSTER_CI_MAINTAINERS; cluster CI refused."; exit 1 ;;
+            *",$actor,"*) ;;
+            *) deny "$ACTOR is not listed in CLUSTER_CI_MAINTAINERS; cluster CI refused." ;;
           esac
+          clusters=both
+          if [ "$EVENT" = workflow_dispatch ]; then
+            clusters="${INPUT_CLUSTERS:-both}"
+          elif [ "$EVENT" = issue_comment ]; then
+            # Only the first line counts: "/ci", "/ci both", "/ci coreweave" or "/ci digs".
+            line="$(printf '%s' "$COMMENT_BODY" | head -n1 | tr -d '\r')"
+            if [[ "$line" =~ ^/ci([[:space:]]+(both|coreweave|digs))?[[:space:]]*$ ]]; then
+              clusters="${BASH_REMATCH[2]:-both}"
+            else
+              deny "Comment is not a valid /ci command."
+            fi
+          fi
+          echo "$ACTOR is an authorized maintainer; clusters: $clusters."
+          echo "allowed=true" >> "$GITHUB_OUTPUT"
+          echo "clusters=$clusters" >> "$GITHUB_OUTPUT"
+
+      - name: Acknowledge the comment
+        if: github.event_name == 'issue_comment' && steps.check.outputs.allowed == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: gh api -X POST "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID/reactions" -f content=rocket
+
+      - name: Resolve the commit to test
+        id: target
+        if: steps.check.outputs.allowed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.issue.number || inputs.pr }}
+          REVIEWED_SHA: ${{ inputs.reviewed_sha }}
+        run: |
+          if [ -z "${PR:-}" ]; then
+            echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+            echo "Testing main at $GITHUB_SHA"
+            exit 0
+          fi
+          case "$PR" in *[!0-9]*) echo "::error::pr must be a pull request number."; exit 1 ;; esac
+          read -r state base head < <(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq '[.state, .base.ref, .head.sha] | @tsv')
+          [ "$state" = open ] || { echo "::error::PR #$PR is not open."; exit 1; }
+          [ "$base" = main ] || { echo "::error::PR #$PR targets '$base', not main."; exit 1; }
+          if [ "$EVENT" = workflow_dispatch ] && { [ -z "${REVIEWED_SHA:-}" ] || [ "$REVIEWED_SHA" != "$head" ]; }; then
+            echo "::error::reviewed_sha must equal the PR head $head. Review that commit, then pass its full SHA."
+            exit 1
+          fi
+          echo "sha=$head" >> "$GITHUB_OUTPUT"
+          echo "pr=$PR" >> "$GITHUB_OUTPUT"
+          echo "Testing PR #$PR at $head"
+          gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename' | head -200
 
   coreweave-cpu:
     name: pytest (cpu, coreweave)
     needs: authorize
-    if: github.event_name != 'workflow_dispatch' || inputs.clusters != 'digs'
-    environment: cluster-ci
+    if: needs.authorize.outputs.allowed == 'true' && contains(fromJSON('["both","coreweave"]'), needs.authorize.outputs.clusters)
     runs-on: [self-hosted, coreweave-cpu]
     timeout-minutes: 30
     env:
       CI_CLUSTER: coreweave
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
       - name: Run tests (srun + apptainer)
         env:
           TEST_PATH: ./tests
@@ -79,22 +178,20 @@ jobs:
   coreweave-gpu:
     name: pytest (gpu, coreweave)
     needs: authorize
-    if: github.event_name != 'workflow_dispatch' || inputs.clusters != 'digs'
-    environment: cluster-ci
+    if: needs.authorize.outputs.allowed == 'true' && contains(fromJSON('["both","coreweave"]'), needs.authorize.outputs.clusters)
     runs-on: [self-hosted, coreweave-gpu]
     timeout-minutes: 60
     env:
       CI_CLUSTER: coreweave
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
       - name: GPU tests (srun interactive + apptainer)
         env:
           SOTA_CKPT_PATH: ${{ vars.SOTA_CKPT_PATH || '' }}  # unset -> skip MCSA validation + search
           # Written by run_gpu_lane.sh once the allocation starts: present => real test failure, no retry.
           GPU_ALLOC_SENTINEL: ${{ github.workspace }}/.gpu_alloc_started
-          # Pass the repository secrets into Apptainer without placing their values in command arguments.
-          APPTAINERENV_AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          APPTAINERENV_AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
           # Retries only cover allocation failures (GPU contention), not test failures.
           attempts=3
@@ -139,8 +236,7 @@ jobs:
   digs-cpu:
     name: pytest (cpu, digs)
     needs: authorize
-    if: github.event_name != 'workflow_dispatch' || inputs.clusters != 'coreweave'
-    environment: cluster-ci
+    if: needs.authorize.outputs.allowed == 'true' && contains(fromJSON('["both","digs"]'), needs.authorize.outputs.clusters)
     # Repo-level self-hosted runner on a DIGS login node; it only submits srun to the cpu partition.
     runs-on: [self-hosted, digs]
     timeout-minutes: 60
@@ -148,6 +244,8 @@ jobs:
       CI_CLUSTER: digs
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
       - name: Run tests (srun + apptainer)
         env:
           TEST_PATH: ./tests
@@ -157,3 +255,24 @@ jobs:
           srun --chdir=$PWD -p cpu -c $N_CPU -t 00:50:00 --mem=32G \
             -J "ci-digs-${GITHUB_RUN_ID}" \
             bash ./.github/ci/run_cpu_lane.sh
+
+  report:
+    name: report the result on the pull request
+    needs: [authorize, coreweave-cpu, coreweave-gpu, digs-cpu]
+    if: ${{ always() && github.event_name == 'issue_comment' && needs.authorize.outputs.allowed == 'true' && needs.authorize.outputs.pr != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comment the outcome
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ needs.authorize.outputs.pr }}
+          SHA: ${{ needs.authorize.outputs.sha }}
+          CW_CPU: ${{ needs.coreweave-cpu.result }}
+          CW_GPU: ${{ needs.coreweave-gpu.result }}
+          DIGS_CPU: ${{ needs.digs-cpu.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "Cluster CI for \`${SHA:0:7}\`: CoreWeave CPU **$CW_CPU**, CoreWeave GPU **$CW_GPU**, DIGS CPU **$DIGS_CPU**. Details: $RUN_URL"
