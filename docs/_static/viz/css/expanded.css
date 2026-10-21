@@ -10,6 +10,25 @@ html[data-theme="dark"] :is([data-viz-page="expanded"], .expanded-information) {
   --viz-lat-ink: #cff6ef;
   --viz-lat-soft: #124f52;
 }
+/* Match the site's rounded buttons; inherit typography and keyboard focus from arch.css. */
+:is([data-viz-page="expanded"], .expanded-information) .arch-tabs { gap: 8px; }
+:is([data-viz-page="expanded"], .expanded-information) :is(.arch-tabs > button, .expanded-walk) {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 7px 12px;
+  border: 1px solid var(--wf-ink-soft);
+  border-radius: 6px;
+  background: var(--wf-surface);
+  color: var(--wf-ink);
+}
+:is([data-viz-page="expanded"], .expanded-information) :is(.arch-tabs > button, .expanded-walk)[aria-pressed="true"] {
+  border-color: var(--viz-lat-ink);
+  background: var(--viz-lat-soft);
+  color: var(--viz-lat-ink);
+}
+:is([data-viz-page="expanded"], .expanded-information) :is(.arch-tabs > button, .expanded-walk):hover {
+  box-shadow: 0 0 0 1px currentColor;
+}
 .expanded-grid-scroll { overflow-x: auto; padding: 4px 2px; }
 .expanded-grid { position: relative; display: grid; grid-template-columns: 145px repeat(32, minmax(13px, 1fr)); gap: 3px; min-width: 710px; align-items: center; }
 /* One frame around the six cells; an absolute grid item preserves their gaps and fills. */
@@ -49,3 +68,6 @@ html[data-theme="dark"] :is([data-viz-page="expanded"], .expanded-information) {
   .expanded-chart-panels { grid-template-columns: 1fr; }
   [data-viz-page="expanded"] .latents-view:nth-child(n+4) { padding-top: 0; }
 }
+
+[data-viz-page="expanded"] button.expanded-walk { justify-content: center; min-width: 156px; }
+[data-viz-page="expanded"] .expanded-noise-controls { max-width: 960px; }
