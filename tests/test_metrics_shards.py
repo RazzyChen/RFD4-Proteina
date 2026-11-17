@@ -185,3 +185,87 @@ def test_process_termination_preserves_committed_batch_and_resume_matches_contro
         if process.is_alive():
             process.terminate()
             process.join(10)
+
+
+def test_automatic_merge_waits_for_completion_and_publishes_once(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from rfproteina.inference_utils.metrics_shards import try_aggregate_metrics_run
+
+    run, output = tmp_path / "run", tmp_path / "csv"
+    create_metrics_run(run, 2, {})
+    first = MetricsShardWriter(run, 0, 2, expected_batches=0)
+    first.write("final", [_row(0, value=1.0)])
+    first.complete()
+    assert not try_aggregate_metrics_run(run, output)
+    assert not output.exists()
+    second = MetricsShardWriter(run, 1, 2, expected_batches=0)
+    second.write("final", [_row(1, value=2.0)])
+    second.complete()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: try_aggregate_metrics_run(run, output), range(4)))
+    assert sum(results) == 1
+    assert set(pd.read_csv(output / "per_example_metrics.csv").example_id) == {"rep0", "rep1"}
+    assert json.loads((output / "merge_report.json").read_text())["complete"]
+    assert (run / "MERGED.json").is_file()
+    assert not try_aggregate_metrics_run(run, output)
+
+
+def test_automatic_merge_failure_preserves_outputs_and_can_retry(tmp_path, monkeypatch):
+    import rfproteina.inference_utils.aggregate_metrics as aggregate
+    from rfproteina.inference_utils.metrics_shards import try_aggregate_metrics_run
+
+    run, output = tmp_path / "run", tmp_path / "csv"
+    create_metrics_run(run, 1, {})
+    writer = MetricsShardWriter(run, 0, 1, expected_batches=0)
+    writer.write("final", [_row(0, value=1.0)])
+    writer.complete()
+    output.mkdir()
+    previous = output / "per_example_metrics.csv"
+    previous.write_text("previous results\n")
+    original = aggregate.concatenate_results
+
+    def fail(*args, output_dir, **kwargs):
+        (Path(output_dir) / "per_example_metrics.csv").write_text("unfinished\n")
+        raise RuntimeError("aggregation failed")
+
+    monkeypatch.setattr(aggregate, "concatenate_results", fail)
+    with pytest.raises(RuntimeError, match="aggregation failed"):
+        try_aggregate_metrics_run(run, output)
+    assert previous.read_text() == "previous results\n"
+    assert not (run / "MERGED.json").exists()
+    assert not list(output.glob(".merge-*"))
+    monkeypatch.setattr(aggregate, "concatenate_results", original)
+    assert try_aggregate_metrics_run(run, output)
+    assert pd.read_csv(previous).example_id.tolist() == ["rep0"]
+
+
+def test_automatic_job_merges_do_not_overwrite_other_jobs(tmp_path):
+    from types import SimpleNamespace
+
+    from lightning.pytorch.trainer.states import TrainerFn
+
+    from rfproteina.proteina import Proteina
+
+    for job in (0, 1):
+        run = tmp_path / "inference_metrics" / "metrics_shards" / f"invocation{job}"
+        create_metrics_run(run, 1, {"job_id": job})
+        writer = MetricsShardWriter(run, 0, 1, expected_batches=0)
+        writer.write("final", [_row(job, value=float(job))])
+        writer.complete()
+        model = SimpleNamespace(
+            store_dir=str(tmp_path),
+            job_id=job,
+            _metrics_shards=writer,
+            _metrics_pool=SimpleNamespace(shutdown=lambda: None),
+            auto_aggregate_metrics=False,
+            trainer=SimpleNamespace(state=SimpleNamespace(fn=TrainerFn.VALIDATING)),
+        )
+        Proteina.on_validation_end(model)
+        assert not (run / "MERGED.json").exists()
+        model.auto_aggregate_metrics = True
+        Proteina.on_validation_end(model)
+    for job in (0, 1):
+        csv = pd.read_csv(tmp_path / "inference_metrics" / f"job{job}" / "per_example_metrics.csv")
+        assert csv.example_id.tolist() == [f"rep{job}"]
+    assert not (tmp_path / "inference_metrics" / "per_example_metrics.csv").exists()

@@ -484,6 +484,7 @@ def load_ckpt_n_configure_inference(cfg: dict, model: Proteina | None = None) ->
         save_chain_of_interest=cfg.get("save_chain_of_interest", False),
         compress_outputs=cfg.get("compress_outputs", False),
         metrics_aggregation=cfg.get("metrics_aggregation", "files"),
+        auto_aggregate_metrics=cfg.get("auto_aggregate_metrics", True),
     )
 
     model.search_strategy = None
@@ -754,7 +755,7 @@ def run_generation(
             model._metrics_suffix_extra = ""
 
     logger.info(f"✓ Generation complete! Results saved to {cfg.out_dir}", extra={"always_visible": True})
-    if cfg.get("metrics_aggregation", "files") == "files":
+    if cfg.get("metrics_aggregation", "files") == "files" and not cfg.get("auto_aggregate_metrics", True):
         logger.info(
             "Merge rank-local metrics after all workers finish: "
             f"python -m rfproteina.inference_utils.aggregate_metrics {Path(cfg.out_dir) / 'inference_metrics'}",

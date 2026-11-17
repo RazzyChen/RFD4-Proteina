@@ -6,6 +6,7 @@ import time
 from datetime import timedelta
 
 import lightning as L
+import pandas as pd
 import pytest
 import torch
 from lightning.pytorch.strategies import DDPStrategy
@@ -44,6 +45,7 @@ class ShardedMetricsProbe(L.LightningModule):
         self.mixed = mixed
         self.is_inference = True
         self.metrics_aggregation = "files"
+        self.auto_aggregate_metrics = True
         self.job_id = self.global_prefix = self.ckpt_path = self.ckpt_name = None
         self.cfg_exp = OmegaConf.create({})
         self.search_strategy = None
@@ -79,6 +81,7 @@ class ShardedMetricsProbe(L.LightningModule):
     def on_validation_end(self):
         module.compute_oracle_metrics_for_val_output, module.run_foldseek_distributed = self.originals
         (self._metrics_shards.directory / "finished_at.json").write_text(json.dumps(time.time()))
+        Proteina.on_validation_end(self)
 
 
 @pytest.mark.parametrize("devices,mixed", [(1, False), (2, False), (2, True)])
@@ -113,6 +116,10 @@ def test_lightning_late_rank_finishes_without_end_collectives(tmp_path, devices,
     frame, report = read_metrics_shards(tmp_path / "inference_metrics" / "metrics_shards")
     count = 8 if mixed else 6
     assert report["complete"] and len(frame) == count
+    # No manual merger: the production end hook must have published every rank.
+    csv = pd.read_csv(tmp_path / "inference_metrics" / "per_example_metrics.csv")
+    assert len(csv) == count and set(csv.example_id) == set(frame.example_id)
+    assert len(list((tmp_path / "inference_metrics").rglob("MERGED.json"))) == 1
     indexed = frame.set_index("example_id")
     for index in range(count):
         assert indexed.loc[f"sample{index}", "oracle.score"] == index * 2

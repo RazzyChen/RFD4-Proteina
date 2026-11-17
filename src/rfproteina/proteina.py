@@ -41,7 +41,7 @@ from rfproteina.inference_utils.foldseek import (
     run_foldseek_distributed,
 )
 from rfproteina.inference_utils.insertion_mapping import build_predicted_insertion_mapping
-from rfproteina.inference_utils.metrics_shards import MetricsShardWriter, create_metrics_run
+from rfproteina.inference_utils.metrics_shards import MetricsShardWriter, create_metrics_run, try_aggregate_metrics_run
 from rfproteina.inference_utils.solve_rate_metrics import compute_solve_rate_metrics
 from rfproteina.metrics.metric import MetricManager
 from rfproteina.metrics.oracles.af3_oracle import release_af3_daemon
@@ -381,6 +381,7 @@ class Proteina(L.LightningModule):
         self.store_dir = store_dir if store_dir is not None else os.path.join(".", "runs", cfg_exp.run_name_)
         self._metrics_pool = MetricsPool(num_workers=0, mm_cfgs={})
         self.metrics_aggregation = "collective"
+        self.auto_aggregate_metrics = False
         self._metrics_shards = None
         try:
             self.configure_metrics(cfg_exp.get("metrics") if load_training_metrics else None)
@@ -961,6 +962,23 @@ class Proteina(L.LightningModule):
 
     def on_validation_end(self) -> None:
         self._metrics_pool.shutdown()
+        if self._metrics_shards is not None and self.auto_aggregate_metrics:
+            directory = self._metrics_shards.directory.parent
+            output = Path(self.store_dir) / "inference_metrics"
+            if self.job_id is not None:
+                output /= f"job{self.job_id}"
+            merge_logger = RankedLogger(__name__, rank_zero_only=False)
+            try:
+                merged = try_aggregate_metrics_run(directory, output)
+            except Exception:
+                merge_logger.exception(
+                    f"Automatic metrics merge failed; shards are preserved in {directory}. "
+                    "Retry with python -m rfproteina.inference_utils.aggregate_metrics "
+                    f"{directory} --output_dir {output}"
+                )
+                raise
+            if merged:
+                merge_logger.info(f"Automatically aggregated metrics in {output}", extra={"always_visible": True})
         # Only during training: free the resident AF3 worker's GPU between validation
         # epochs. Skipped for pure validation/inference runs, which have no training to
         # reclaim the memory for. A no-op unless an AF3 daemon socket is configured.
@@ -1685,6 +1703,7 @@ class Proteina(L.LightningModule):
         save_chain_of_interest: bool = False,
         compress_outputs: bool = False,
         metrics_aggregation: str = "collective",
+        auto_aggregate_metrics: bool = False,
     ) -> None:
         """Sets inference config with all sampling parameters required by the method (dt, etc).
 
@@ -1701,13 +1720,15 @@ class Proteina(L.LightningModule):
                 These are only consumed by foldseek clustering, so they default to ``False``
                 for inference; the launch script enables them when foldseek will run.
             compress_outputs: Write new inference structure artifacts as Zstd instead of plain CIF.
-            metrics_aggregation: 'files' writes rank-local Parquet parts for offline aggregation;
+            metrics_aggregation: 'files' writes rank-local Parquet parts;
                 'collective' retains epoch-end DDP metric gathering. Training uses collectives.
+            auto_aggregate_metrics: Automatically merge a completed file-mode invocation into CSVs.
         """
         self.inf_cfg = inf_cfg
         if metrics_aggregation not in {"collective", "files"}:
             raise ValueError("metrics_aggregation must be 'files' or 'collective'")
         self.metrics_aggregation = metrics_aggregation
+        self.auto_aggregate_metrics = auto_aggregate_metrics
         if store_dir is not None:
             self.store_dir = store_dir
 

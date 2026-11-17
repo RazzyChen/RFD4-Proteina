@@ -175,3 +175,38 @@ def read_metrics_shards(directory: Path, *, allow_partial: bool = False) -> tupl
 
 def create_metrics_run(directory: Path, world_size: int, metadata: dict) -> None:
     _atomic_json(Path(directory) / "run.json", dict(version=1, world_size=world_size, **metadata))
+
+
+def try_aggregate_metrics_run(directory: Path, output_dir: Path) -> bool:
+    """The last finisher publishes this invocation's CSVs, without rank waiting.
+
+    Requires a shared filesystem supporting atomic rename and advisory file locks.
+    The lock is released on process exit; failed merges can be retried. Completed
+    shards remain immutable and available for the standalone merger.
+    """
+    import fcntl
+
+    directory, output_dir = Path(directory), Path(output_dir)
+    run = json.loads((directory / "run.json").read_text())
+    if not all((directory / f"rank{rank:06d}" / "DONE.json").is_file() for rank in range(run["world_size"])):
+        return False
+    with (directory / "merge.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return False
+        marker = directory / "MERGED.json"
+        if marker.exists():
+            return False
+        from rfproteina.inference_utils.aggregate_metrics import concatenate_results
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+        # Publish only after all aggregation succeeds. Never clean up other jobs'
+        # CSVs; their shards are combined separately by the offline merger.
+        with tempfile.TemporaryDirectory(prefix=".merge-", dir=output_dir) as staging:
+            concatenate_results(str(directory), output_dir=staging, cleanup=False, sequence_probability_workers=1)
+            files = sorted(Path(staging).iterdir())
+            for path in files:
+                os.replace(path, output_dir / path.name)
+            _atomic_json(marker, {"output_dir": str(output_dir.resolve()), "files": [p.name for p in files]})
+        return True

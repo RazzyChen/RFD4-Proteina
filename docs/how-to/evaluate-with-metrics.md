@@ -66,7 +66,20 @@ Completed CPU design metrics are collected without blocking between batches; rem
 design metrics are drained before final oracle evaluation. No metric gather or distributed
 Foldseek runs at the end of file-mode inference; ranks finish independently.
 
-After all workers finish, assemble the usual CSVs and optionally cluster globally:
+With `auto_aggregate_metrics=true` (default), the last finishing rank automatically
+merges the current invocation into the usual CSVs in `inference_metrics/`. No rank
+waits for another rank in a collective. An explicit `job_id` places these CSVs in
+`inference_metrics/jobN/` so parallel jobs cannot overwrite one another. The scheduler's
+dependent aggregation job can still merge all jobs globally.
+
+A file lock prevents concurrent duplicate merges. All expected ranks must have
+`DONE.json`; incomplete runs are not automatically published. `MERGED.json` records
+successful publication. Existing shards are preserved, and merging never generates
+or refolds designs. Set `auto_aggregate_metrics=false` to keep manual-only behavior.
+Automatic merging covers only the current invocation, not older runs in the same folder.
+Use fresh output directories for independent runs.
+
+To rebuild CSVs from all invocations and optionally cluster globally:
 
 ```bash
 python -m rfproteina.inference_utils.aggregate_metrics /path/to/output/inference_metrics \
