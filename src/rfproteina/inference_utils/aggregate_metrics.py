@@ -1,6 +1,7 @@
 #!/usr/bin/env -S /bin/sh -c '"$(dirname "$0")/../../../scripts/rfproteina_exec.sh" training "$0" "$@"'
 """Concatenate and aggregate per-example metrics from multi-job evaluation runs."""
 
+import json
 import multiprocessing as mp
 import os
 import shutil
@@ -28,6 +29,7 @@ from rfproteina.inference_utils.foldseek import (  # noqa: E402  (load_dotenv mu
     add_diversity_summary_metrics,
     add_foldseek_diversity_to_per_example_df,
 )
+from rfproteina.inference_utils.metrics_shards import read_metrics_shards  # noqa: E402
 from rfproteina.inference_utils.solve_rate_metrics import (  # noqa: E402  (load_dotenv must run first)
     compute_solve_rate_metrics,
 )
@@ -247,6 +249,7 @@ def concatenate_results(
     output_dir: str | None = None,
     foldseek_threads: int | None = None,
     sequence_probability_workers: int | None = None,
+    allow_partial: bool = False,
 ) -> None:
     """Concatenate per-example and aggregated metrics from multiple jobs.
 
@@ -268,10 +271,22 @@ def concatenate_results(
         sequence_probability_workers: Number of processes used to reconstruct probability
             observations from output CIFs. Defaults to up to eight CPUs from the SLURM allocation
             or process affinity; set explicitly to use more.
+        allow_partial: Export committed Parquet parts even if some ranks have not completed.
+            Incomplete workers are listed in merge_report.json; corrupt committed parts still fail.
     """
     input = Path(input)
+    shard_input = input / "metrics_shards" if (input / "metrics_shards").is_dir() else input
+    is_sharded = input.is_dir() and any(shard_input.rglob("run.json"))
+    per_example_files = []
+    shard_report = None
 
-    if input.is_file():
+    if is_sharded:
+        concatenated_per_example, shard_report = read_metrics_shards(shard_input, allow_partial=allow_partial)
+        if not shard_report["complete"]:
+            logger.warning(f"Merging partial metrics: {shard_report['missing']}")
+        if concatenated_per_example.empty:
+            raise ValueError("No committed candidate metrics to aggregate")
+    elif input.is_file():
         concatenated_per_example = pd.read_csv(input)
     else:
         # Find all per-example metric files including from previous concatenations.
@@ -335,6 +350,8 @@ def concatenate_results(
     concatenated_per_example = concatenated_per_example.round(4)
     output_path = Path(output_dir) if output_dir is not None else (input.parent if input.is_file() else input)
     output_path.mkdir(parents=True, exist_ok=True)
+    if shard_report is not None:
+        (output_path / "merge_report.json").write_text(json.dumps(shard_report, indent=2) + "\n")
     per_example_output = output_path / "per_example_metrics.csv"
     concatenated_per_example.to_csv(per_example_output, index=False)
     logger.info(f"Saved concatenated per-example metrics to {per_example_output}")

@@ -60,6 +60,7 @@ dependencies = [
     "numpy>=1.25.0",
     "scipy>=1.13.1",
     "pandas>=2,<3",
+    "pyarrow>=23.0.1", # Rank-local inference metrics (Parquet)
     "pyyaml>=6.0",  # Packaged RFD4 residue vocabulary
     "toolz",
     "fire",

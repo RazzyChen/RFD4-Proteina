@@ -1,6 +1,7 @@
 import os
 import random
 import time
+import uuid
 from collections.abc import Mapping
 from contextlib import nullcontext
 from pathlib import Path
@@ -40,6 +41,7 @@ from rfproteina.inference_utils.foldseek import (
     run_foldseek_distributed,
 )
 from rfproteina.inference_utils.insertion_mapping import build_predicted_insertion_mapping
+from rfproteina.inference_utils.metrics_shards import MetricsShardWriter, create_metrics_run
 from rfproteina.inference_utils.solve_rate_metrics import compute_solve_rate_metrics
 from rfproteina.metrics.metric import MetricManager
 from rfproteina.metrics.oracles.af3_oracle import release_af3_daemon
@@ -378,6 +380,8 @@ class Proteina(L.LightningModule):
         self.inf_cfg = inf_cfg  # Used for inference-like validation
         self.store_dir = store_dir if store_dir is not None else os.path.join(".", "runs", cfg_exp.run_name_)
         self._metrics_pool = MetricsPool(num_workers=0, mm_cfgs={})
+        self.metrics_aggregation = "collective"
+        self._metrics_shards = None
         try:
             self.configure_metrics(cfg_exp.get("metrics") if load_training_metrics else None)
         except InstantiationException as e:
@@ -966,6 +970,35 @@ class Proteina(L.LightningModule):
     def on_validation_epoch_start(self) -> None:
         """Re-initialize validation outputs at the start of each validation epoch."""
         self.validation_output_generation = []
+        self._metrics_shards = None
+        self._shard_design_entries = {}
+        self._shard_batch_offset = 0
+        if self.is_inference and self.metrics_aggregation == "files":
+            # One short startup broadcast establishes a shared invocation namespace.
+            # No communication is needed once independent inference work starts.
+            run_id = uuid.uuid4().hex if self.global_rank == 0 else None
+            if self.trainer.world_size > 1:
+                run_id = self.trainer.strategy.broadcast(run_id, src=0)
+            directory = Path(self.store_dir) / "inference_metrics" / "metrics_shards" / run_id
+            if self.global_rank == 0:
+                create_metrics_run(
+                    directory,
+                    self.trainer.world_size,
+                    {
+                        "job_id": self.job_id,
+                        "global_prefix": self.global_prefix,
+                        "eval_only": bool(getattr(self, "_eval_from_disk", False)),
+                        "ckpt_path": self.ckpt_path,
+                        "ckpt_name": self.ckpt_name,
+                    },
+                )
+            self._metrics_shards = MetricsShardWriter(
+                directory,
+                self.global_rank,
+                self.trainer.world_size,
+                expected_batches=sum(int(n) for n in self.trainer.num_val_batches),
+            )
+            logger.info(f"Rank-local metrics: {directory}; merge after all workers finish")
 
         # Tracks whether oracle/refold/pass MMs were set up in this epoch
         # to avoid double-setup
@@ -995,6 +1028,13 @@ class Proteina(L.LightningModule):
 
     def validation_step(self, batch: dict, batch_idx: int, dataloader_idx: int = 0) -> dict:
         """Apply dataset-specific sampling settings for training-time validation."""
+        eval_loader = getattr(self, "_inference_eval_loader_idx", None)
+        if self.is_inference and eval_loader is not None:
+            # Generation and skip_existing re-evaluation share a single epoch, so
+            # a fast rank cannot enter another Trainer startup barrier while a
+            # slow rank is still finishing its local oracle evaluation.
+            self._eval_from_disk = dataloader_idx == eval_loader
+            return self._validation_step(batch, batch_idx, 0)
         if self.is_inference or self.inf_cfg is None:
             return self._validation_step(batch, batch_idx, dataloader_idx)
         datasets = [cfg for cfg in self.cfg_exp.datasets.val.values() if cfg]
@@ -1206,11 +1246,39 @@ class Proteina(L.LightningModule):
 
             # Store for epoch-end aggregation
             self.validation_output_generation.append(metrics_output)
+            if self._metrics_shards is not None:
+                self._shard_design_entries[_design_key(metrics_output)] = metrics_output
             self._metrics_pool.submit_generated_structure(
                 _design_key(metrics_output), staged_payload, self.design_metric_manager
             )
 
         return metrics_output
+
+    def _collect_design_metrics(self, *, wait: bool = True) -> list[dict]:
+        staged_results = self._metrics_pool.drain_generated_structure(wait=wait)
+        entries = (
+            self._shard_design_entries
+            if self._metrics_shards is not None
+            else {_design_key(entry): entry for entry in self.validation_output_generation}
+        )
+        updated = []
+        for key, staged in staged_results.items():
+            entry = entries[key]
+            for name, value in staged.items():
+                entry.setdefault(name, value)
+            updated.append(entry)
+        return updated
+
+    def on_validation_batch_end(self, outputs: Any, batch: Any, batch_idx: int, dataloader_idx: int = 0) -> None:
+        if self._metrics_shards is None:
+            return
+        # Poll completed CPU work without delaying diffusion or changing oracle timing.
+        updated = self._collect_design_metrics(wait=False)
+        new = self.validation_output_generation[self._shard_batch_offset :]
+        rows = {_design_key(entry): _clean_metrics_dict(entry, keep_metadata_only=True) for entry in [*updated, *new]}
+        self._metrics_shards.write("design", list(rows.values()))
+        self._metrics_shards.batch_complete(f"{dataloader_idx}:{batch_idx}")
+        self._shard_batch_offset = len(self.validation_output_generation)
 
     def _gather_metrics(self, local_metrics: list[dict]) -> list[dict] | None:
         """Gather per-example metric dicts from all ranks to rank 0.
@@ -1236,10 +1304,10 @@ class Proteina(L.LightningModule):
           1. Drain per-structure metric futures into ``validation_output_generation`` (all ranks).
           1b. Pre-oracle filter: excise designs that fail design-phase criteria before oracle
               folding (all ranks).
-          2. Gather per-design metrics to rank 0 (DDP).
+          2. Commit rank-local Parquet metrics (inference files mode), or gather (legacy/training).
           3. Run oracle fold + refolding + pass_criteria (all ranks).
-          4. Gather refolding metrics to rank 0 (DDP).
-          5. Distributed foldseek clustering across ranks (DDP scatter+gather;
+          4. Commit refold/final parts and DONE locally, or gather (legacy/training).
+          5. Legacy/training only: distributed foldseek clustering (DDP scatter+gather;
              no-op for ``world_size == 1`` or ``FOLDSEEK_EXEC`` unset).
           6. Rank 0 merges design+refold metrics, applies cluster IDs, runs the
              in-process foldseek fallback for any groups not covered by step 5,
@@ -1247,13 +1315,7 @@ class Proteina(L.LightningModule):
         """
 
         # 1. Drain per-structure metric futures + merge into validation_output_generation.
-        staged_results_by_key = self._metrics_pool.drain_generated_structure()
-        if staged_results_by_key:
-            for entry in self.validation_output_generation:
-                staged = staged_results_by_key.get(_design_key(entry))
-                if staged is not None:
-                    for k, v in staged.items():
-                        entry.setdefault(k, v)
+        self._collect_design_metrics()
         if self.design_metric_manager is not None:
             self.design_metric_manager.on_validation_epoch_end()
 
@@ -1275,7 +1337,13 @@ class Proteina(L.LightningModule):
         local_design_metrics = [
             c for m in self.validation_output_generation if (c := _clean_metrics_dict(m)) is not None
         ]
-        all_design_metrics = self._gather_metrics(local_design_metrics)
+        if self._metrics_shards is not None:
+            self._metrics_shards.write(
+                "design", [_clean_metrics_dict(m, keep_metadata_only=True) for m in self.validation_output_generation]
+            )
+            all_design_metrics = local_design_metrics
+        else:
+            all_design_metrics = self._gather_metrics(local_design_metrics)
 
         metrics_dir = Path(self.store_dir) / ("val_metrics" if not self.is_inference else "inference_metrics")
 
@@ -1334,26 +1402,38 @@ class Proteina(L.LightningModule):
                 cleaned = _clean_metrics_dict(result)
                 if cleaned:
                     local_refolding_metrics.append(cleaned)
+                    if self._metrics_shards is not None:
+                        self._metrics_shards.write("refold", [cleaned])
         for mm in [oracle_mm, refold_mm, pass_mm]:
             if exists(mm):
                 mm.on_validation_epoch_end()
 
         # 4. Gather refolding metrics to rank 0.
-        all_refolding_metrics = self._gather_metrics(local_refolding_metrics)
-
-        # 5. Distributed foldseek (no-op for world_size==1 / FOLDSEEK_EXEC unset).
-        foldseek_cluster_map = run_foldseek_distributed(
-            all_design_metrics,
-            world_size=self.trainer.world_size,
-            global_rank=self.global_rank,
-            is_inference=self.is_inference,
+        all_refolding_metrics = (
+            local_refolding_metrics
+            if self._metrics_shards is not None
+            else self._gather_metrics(local_refolding_metrics)
         )
 
-        if self.global_rank != 0:
+        # 5. Distributed foldseek (no-op for world_size==1 / FOLDSEEK_EXEC unset).
+        foldseek_cluster_map = (
+            {}
+            if self._metrics_shards is not None
+            else run_foldseek_distributed(
+                all_design_metrics,
+                world_size=self.trainer.world_size,
+                global_rank=self.global_rank,
+                is_inference=self.is_inference,
+            )
+        )
+
+        if self.global_rank != 0 and self._metrics_shards is None:
             return  # non-zero ranks exit after the foldseek-step collectives
 
         # 6. Rank 0 writes the per-example CSV + summary logs.
         if not all_design_metrics and not all_refolding_metrics:
+            if self._metrics_shards is not None:
+                self._metrics_shards.complete()
             logger.warning("on_validation_epoch_end_generation: no metrics to log")
             return
 
@@ -1371,6 +1451,11 @@ class Proteina(L.LightningModule):
                             row[f"{name}.pass"] = row[f"{name}.all_metrics_present"] = 0.0
 
         if not combined_metrics:
+            return
+
+        if self._metrics_shards is not None:
+            self._metrics_shards.write("final", combined_metrics)
+            self._metrics_shards.complete()
             return
 
         # Merge distributed-foldseek cluster IDs into combined_metrics.
@@ -1599,6 +1684,7 @@ class Proteina(L.LightningModule):
         ckpt_name: str | None = None,
         save_chain_of_interest: bool = False,
         compress_outputs: bool = False,
+        metrics_aggregation: str = "collective",
     ) -> None:
         """Sets inference config with all sampling parameters required by the method (dt, etc).
 
@@ -1615,8 +1701,13 @@ class Proteina(L.LightningModule):
                 These are only consumed by foldseek clustering, so they default to ``False``
                 for inference; the launch script enables them when foldseek will run.
             compress_outputs: Write new inference structure artifacts as Zstd instead of plain CIF.
+            metrics_aggregation: 'files' writes rank-local Parquet parts for offline aggregation;
+                'collective' retains epoch-end DDP metric gathering. Training uses collectives.
         """
         self.inf_cfg = inf_cfg
+        if metrics_aggregation not in {"collective", "files"}:
+            raise ValueError("metrics_aggregation must be 'files' or 'collective'")
+        self.metrics_aggregation = metrics_aggregation
         if store_dir is not None:
             self.store_dir = store_dir
 

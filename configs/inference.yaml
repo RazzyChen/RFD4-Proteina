@@ -11,6 +11,10 @@ defaults:
 
 inference_backend: native # native (torch.compile / eager per compile_lengths) | bioir (whole workflow through BioIR)
 
+# Rank-local Parquet metrics; merge offline with inference_utils.aggregate_metrics.
+# 'collective' retains the legacy epoch-end DDP gathers and CSV output.
+metrics_aggregation: files
+
 # Used only with inference_backend=bioir.
 bioir:
   dtype: bfloat16

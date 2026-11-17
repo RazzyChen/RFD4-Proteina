@@ -483,6 +483,7 @@ def load_ckpt_n_configure_inference(cfg: dict, model: Proteina | None = None) ->
         ckpt_name=ckpt_name,
         save_chain_of_interest=cfg.get("save_chain_of_interest", False),
         compress_outputs=cfg.get("compress_outputs", False),
+        metrics_aggregation=cfg.get("metrics_aggregation", "files"),
     )
 
     model.search_strategy = None
@@ -718,7 +719,17 @@ def run_generation(
     )
 
     # Generation pass: sample + evaluate the designs that still need generating.
-    if len(dataset) > 0:
+    if cfg.get("metrics_aggregation", "files") == "files" and eval_only_dataset is not None:
+        loaders = [_make_dataloader(dataset)] if len(dataset) else []
+        model._inference_eval_loader_idx = len(loaders)
+        loaders.append(_make_dataloader(eval_only_dataset))
+        try:
+            trainer.validate(model, loaders)
+        finally:
+            model._inference_eval_loader_idx = None
+            model._eval_from_disk = False
+        eval_only_dataset = None
+    elif len(dataset) > 0:
         dataloader = _make_dataloader(dataset)
         logger.info(f"✓ Dataloader created: {len(dataset)} samples, batch_size={batch_size}")
         logger.info(f"Running inference on {len(dataloader)} batches...")
@@ -743,6 +754,12 @@ def run_generation(
             model._metrics_suffix_extra = ""
 
     logger.info(f"✓ Generation complete! Results saved to {cfg.out_dir}", extra={"always_visible": True})
+    if cfg.get("metrics_aggregation", "files") == "files":
+        logger.info(
+            "Merge rank-local metrics after all workers finish: "
+            f"python -m rfproteina.inference_utils.aggregate_metrics {Path(cfg.out_dir) / 'inference_metrics'}",
+            extra={"always_visible": True},
+        )
 
 
 @hydra.main(version_base="1.3", config_path=_config_path, config_name="inference")

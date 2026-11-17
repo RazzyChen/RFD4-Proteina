@@ -58,9 +58,46 @@ or continuation criterion uses refolding. [Structure-only search](../concepts/se
 can score designs without a refolding runtime.
 :::
 
-Pass `metrics_tags` during inference and metrics get computed right after each design. Results land
-under `<out_dir>/inference_metrics/` in `per_example_metrics.csv` (or a per-job CSV for
-SLURM arrays), while structures go under `<out_dir>/inference_samples/`.
+Pass `metrics_tags` during inference to select metrics. Structures go under
+`<out_dir>/inference_samples/`. Generation defaults to `metrics_aggregation=files`:
+each rank saves immutable Parquet parts under
+`<out_dir>/inference_metrics/metrics_shards/<invocation>/rankNNNNNN/`.
+Completed CPU design metrics are collected without blocking between batches; remaining
+design metrics are drained before final oracle evaluation. No metric gather or distributed
+Foldseek runs at the end of file-mode inference; ranks finish independently.
+
+After all workers finish, assemble the usual CSVs and optionally cluster globally:
+
+```bash
+python -m rfproteina.inference_utils.aggregate_metrics /path/to/output/inference_metrics \
+    --cluster_with_foldseek --sequence_probability_workers=1
+```
+
+Enable `save_chain_of_interest=true` during generation for Foldseek. The merger writes
+`per_example_metrics.csv`, `aggregated_metrics.csv`, `per_task_metrics.csv`, and
+`merge_report.json`. It reads existing metrics and does not run generation or refolding.
+To merge just one invocation, pass its directory instead of `inference_metrics`.
+
+Each rank commits a manifest after atomically writing each part, and writes `DONE.json`
+after all its batches and local evaluation finish. The merger checks part hashes and
+row counts, rank coverage, batch completion, and candidate identity. It rejects missing
+workers by default. `--allow_partial=True` explicitly exports committed partial results
+and reports incomplete workers. Uncommitted temporary files are ignored; missing or
+corrupt committed parts are errors. Design and refold rows are joined by
+`(dataset_name, example_id)`, never by row number. Sequences are not deduplicated.
+`DONE.json` means the local pipeline finished, not that every candidate passed or
+every optional metric was available. Existing pass/coverage flags describe those outcomes.
+Duplicate candidate identities assigned to different ranks are errors; choose replicate
+counts divisible by the number of ranks to avoid DistributedSampler padding duplicates.
+
+New invocations use separate directories, preserving older output; a later invocation's
+candidate replaces the earlier row as a whole to avoid inheriting stale refold values.
+Missing work still needs to be rerun explicitly; this is not an automatic task retry
+system. Search-refold reuse and pass criteria are preserved.
+
+`metrics_aggregation=collective` retains the previous epoch-end DDP gathers and rank-0
+CSV output. Training validation also retains its original collective path. The separate
+`rfd4-evaluate` CLI continues writing its usual evaluation CSVs.
 
 The [metrics reference](../reference/metrics.md) covers every metric that ships enabled, what it
 outputs, and which tag turns it on. See the [custom metrics guide](advanced/custom-metrics.md) for

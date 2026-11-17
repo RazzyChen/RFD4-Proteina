@@ -983,17 +983,19 @@ class MetricsPool:
             fut = _completed(_stage_generated_structure(payload, fallback_mm))
         self._futures.append((design_key, fut))
 
-    def drain_generated_structure(self) -> dict[Hashable, dict]:
+    def drain_generated_structure(self, *, wait: bool = True) -> dict[Hashable, dict]:
         """Drain submitted futures into one ``{design_key: metrics}`` map.
 
-        Re-raises the first worker exception. ``_futures`` is cleared first
-        so the pool is left in a clean state for re-use even on failure.
+        Re-raises the first worker exception. Consumed futures are removed first;
+        ``wait=False`` polls only completed work and leaves pending futures queued.
         """
         if not self._futures:
             return {}
         t0 = time.perf_counter()
-        futures = self._futures
-        self._futures = []
+        futures, pending = [], []
+        for item in self._futures:
+            (futures if wait or item[1].done() else pending).append(item)
+        self._futures = pending
         out: dict[Hashable, dict] = {}
         try:
             for design_key, fut in futures:
