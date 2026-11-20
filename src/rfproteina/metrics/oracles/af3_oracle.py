@@ -21,7 +21,6 @@ from typing import Any
 
 import biotite.structure as struc
 import numpy as np
-import torch.distributed as dist
 from atomworks.constants import STANDARD_AA
 from atomworks.io.config import ParseConfig
 from atomworks.io.parser import parse
@@ -489,13 +488,6 @@ class AF3Oracle(OracleMetric):
         # Inherited by DDP ranks forked later; sibling oracles reuse this daemon.
         os.environ["AF3_LAUNCHER_SOCKET_TEMPLATE"] = f"{sock_dir}/af3_daemon_rank{{rank}}.sock"
         logger.info(f"AF3 daemon started for rank {rank} (log: {log})")
-
-    def teardown(self) -> None:
-        """Tear down :attr:`pre_oracle_transform`. A launcher's daemon dies with
-        its slurm step; ours dies at exit."""
-        super().teardown()
-        if dist.is_initialized():
-            dist.barrier()
 
     # ------------------------------------------------------------------
     # Fold path

@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import torch.distributed as dist
 from atomworks.io.config import ParseConfig
 from atomworks.io.parser import parse
 from atomworks.io.utils.annotator import ensure_annotations
@@ -259,11 +258,6 @@ class AF2Oracle(OracleMetric):
         atexit.register(_shutdown_daemon, proc, sock, sock_dir)
         os.environ["AF2_LAUNCHER_SOCKET_TEMPLATE"] = f"{sock_dir}/af2_daemon_rank{{rank}}.sock"
         logger.info(f"AF2 daemon started for rank {rank} (log: {log})")
-
-    def teardown(self) -> None:
-        super().teardown()
-        if dist.is_initialized():
-            dist.barrier()
 
     def fold_one(self, job: OracleJobInput) -> dict:
         n_ok = self.fold_batch([job])

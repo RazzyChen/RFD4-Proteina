@@ -62,9 +62,9 @@ Pass `metrics_tags` during inference to select metrics. Structures go under
 `<out_dir>/inference_samples/`. Generation defaults to `metrics_aggregation=files`:
 each rank saves immutable Parquet parts under
 `<out_dir>/inference_metrics/metrics_shards/<invocation>/rankNNNNNN/`.
-Completed CPU design metrics are collected without blocking between batches; remaining
-design metrics are drained before final oracle evaluation. No metric gather or distributed
-Foldseek runs at the end of file-mode inference; ranks finish independently.
+Completed CPU design metrics are collected without blocking between batches. Each rank
+drains its remaining design metrics, runs oracle evaluation, and checks refold coverage
+locally. The file-mode final evaluation skips metric gathers and distributed Foldseek.
 
 With `auto_aggregate_metrics=true` (default), the last finishing rank automatically
 merges the current invocation into the usual CSVs in `inference_metrics/`. No rank

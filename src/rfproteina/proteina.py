@@ -1397,6 +1397,7 @@ class Proteina(L.LightningModule):
                 items,
                 oracle_mm,
                 on_incomplete=on_incomplete,
+                sync_coverage=self._metrics_shards is None,
             )
 
         post_fold_payloads = [

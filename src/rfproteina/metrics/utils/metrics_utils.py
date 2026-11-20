@@ -50,6 +50,7 @@ from rfproteina.utils.verbosity import VERBOSE, configure_verbosity
 from script_utils.entrypoints import initialize_metrics_worker
 
 logger = RankedLogger(__name__, rank_zero_only=True)
+rank_local_logger = RankedLogger(__name__)
 
 # Name under which a refolding metric can address the refold of a design no
 # pre_oracle_transform rewrote, whichever oracle a given benchmark folds it with
@@ -613,10 +614,17 @@ def apply_pre_oracle_filters(
 
 
 def fold_designs_for_oracles(
-    val_outputs: list[ValOutput], oracle_mm: MetricManager, on_incomplete: str = "raise"
+    val_outputs: list[ValOutput],
+    oracle_mm: MetricManager,
+    on_incomplete: str = "raise",
+    *,
+    sync_coverage: bool = True,
 ) -> None:
-    """Fold this rank's designs with each oracle, then assert (across ranks) that every
-    dispatched design produced a refold. ``on_incomplete``: 'raise' (default) | 'warn'.
+    """Fold this rank's designs and check that each dispatch produced a refold.
+
+    ``sync_coverage`` sums counts across ranks for collective validation. File-mode
+    inference checks coverage locally so fast ranks can finish independently.
+    ``on_incomplete``: 'raise' (default) | 'warn'.
     """
     n_dispatched = n_refolded = 0
     for oracle_key, oracle_metric in oracle_mm.metrics.items():
@@ -627,7 +635,7 @@ def fold_designs_for_oracles(
         if jobs:
             n_refolded += oracle_metric.fold_batch(jobs)
 
-    if dist.is_initialized() and dist.get_world_size() > 1:
+    if sync_coverage and dist.is_initialized() and dist.get_world_size() > 1:
         device = torch.device("cuda", torch.cuda.current_device()) if torch.cuda.is_available() else None
         counts = torch.tensor([n_dispatched, n_refolded], device=device)
         dist.all_reduce(counts)
@@ -640,7 +648,7 @@ def fold_designs_for_oracles(
         f"dispatched to refolding produced no structure (dropped or failed folds)."
     )
     if on_incomplete == "warn":
-        logger.warning(msg)
+        (logger if sync_coverage else rank_local_logger).warning(msg)
     else:
         raise RuntimeError(msg)
 
